@@ -1,0 +1,20 @@
+[
+  {
+    "telegram_id": 7223378630,
+    "whatsapp_number": "",
+    "expires": "2035-07-01T17:49:55.955Z",
+    "is_admin": 1,
+    "last_connected": "2025-10-05T21:11:27.772Z"
+  },
+  {
+    "telegram_id": 7046308321,
+    "whatsapp_number": "",
+    "is_admin": 0,
+    "last_connected": "2025-10-05T16:25:28.531Z"
+  },
+  {
+    "telegram_id": 7838588122,
+    "whatsapp_number": "",
+    "is_admin": 0
+  }
+]
