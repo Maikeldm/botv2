@@ -8,6 +8,7 @@ const os = require('os');
 const { getPrefix, setPrefix } = require('./lib/prefixHandler.js');
 const TelegramBot = require('node-telegram-bot-api');     
 const moment = require('moment'); // nueva dependencia para fechas
+require('moment-duration-format');
 
 function isAdmin(id) {
   // Asegurarse que config.ADMIN_IDS exista y sea un array
@@ -91,30 +92,62 @@ async function isFullyConnected(sessionPath) {
 const buildMainMenu = async (chatId, user, whatsappConnected) => {
   const prefix = getPrefix(chatId);
   const sysInfo = getSystemInfo();
+  let premiumInfo = '<blockquote>⭐ <b>Suscripción Premium</b>\n┗─ <i>Sin suscripción activa</i></blockquote>';
+  const premiumUser = (Array.isArray(premiumUsers) ? premiumUsers : []).find(u => normalizeId(u.id) === normalizeId(chatId));
+
+  if (premiumUser && premiumUser.expiresAt) {
+    const expires = moment(premiumUser.expiresAt);
+    const now = moment();
+    if (expires.isAfter(now)) {
+      const duration = moment.duration(expires.diff(now)).format("D [días], H [horas]");
+      premiumInfo = `<blockquote>⭐ <b>Suscripción Premium</b>\n┗─ ⏳ <b>Expira en:</b> ${duration}</blockquote>`;
+    }
+  }
+
+  // --- Lógica para la conexión de WhatsApp ---
+  let whatsappInfo = '<blockquote><b>WhatsApp:</b> <i>No conectado</i></blockquote>';
+  if (whatsappConnected && user?.whatsapp_number) {
+    const num = user.whatsapp_number;
+    // Ofuscar número para privacidad: +593...3280
+    const maskedNumber = `${num.slice(0, 4)}...${num.slice(-4)}`;
+    whatsappInfo = 
+      `<blockquote>🟢 <b>WhatsApp:</b> <code>${maskedNumber}</code>\n` +
+      `┣─ 🕒 <b>Conectado desde:</b> <i>Próximamente...</i>\n` +
+      `┗─ 🌐 <b>Proximamente</b> <i>No disponible</i></blockquote>`;
+  }
   
   const text = 
-    `<blockquote>📱 <b>XGHR-BOT V2</b>\n\n` +
-    `${whatsappConnected ? UI.EMOJIS.ONLINE : UI.EMOJIS.OFFLINE} <b>Estado:</b> ${whatsappConnected ? 'Conectado' : 'Desconectado'}\n` +
-    `${UI.EMOJIS.ID} <b>IDIOMA:</b> <code>${chatId}</code>\n` +
-    `${UI.EMOJIS.PREFIX} <b>Prefijo:</b> <code>${prefix}</code>\n\n` +
+    `<b>XGHR-BOT 2.2.1</b>\n\n` +
+    `${whatsappInfo}\n` +
+    `${premiumInfo}\n` +
+    `<blockquote>⚙️ <b>Configuración</b>\n` +
+    `┗─ ⌨️ <b>Prefijo actual:</b> <code>${prefix}</code></blockquote>\n` +
     `<b>Sistema</b>\n` +
-    `RAM: ${sysInfo.usedMem}GB / ${sysInfo.totalMem}GB\n` +
-    `Uptime: ${sysInfo.uptime}\n\n` +
-    `<b>Creditos a <a href="https://wa.me/526421147692">PAZIN WEB</a> ya que varias travas son suyas</b>\n\n` +
-    `<b>❝𝐎𝐰𝐧𝐞𝐫❞ :<a href="https://wa.me/593969533280">ꓚ⌊⌋ 𝙲𝙷𝙾𝙲𝙾𝙿𝙻𝚄𝚂 ⌊⌋ꓛ</a></b></blockquote>` ; // <-- Y AQUÍ PONES LA LÍNEA NUEVA, AFUERA.
+    `<blockquote>RAM: ${sysInfo.usedMem}GB / ${sysInfo.totalMem}GB\n` +
+    `Uptime: ${sysInfo.uptime}</blockquote>\n` +
+    `<b>Creditos a <a href="https://wa.me/526421147692">PAZIN WEB</a></b>\n` +
+    `<b>❝𝐎𝐰𝐧𝐞𝐫❞ :<a href="https://wa.me/593969533280">ꓚ⌊⌋ 𝙲𝙷𝙾𝙲𝙾𝙿𝙻𝚄𝚂 ⌊⌋ꓛ</a></b>`;
 
   const keyboard = [
-    whatsappConnected ? 
-      [{ text: 'Eliminar sesion', callback_data: 'disconnect_whatsapp' }] :
-      [{ text: 'Iniciar sesion', callback_data: 'start_pairing' }],
-    [{ text: '⚙️ Cambiar Prefijo', callback_data: 'change_prefix' }],
-    isAdmin(chatId) ? [{ text: 'Panel Admin', callback_data: 'admin_menu' }] : []
+    whatsappConnected 
+      ? [{ text: ' Desconectar Sesión', callback_data: 'disconnect_whatsapp' }] 
+      : [{ text: ' Iniciar Sesion', callback_data: 'start_pairing' }],
+    [
+      { text: ' Cambiar Prefijo', callback_data: 'change_prefix' },
+      { text: ' Contactar Soporte', url: 'https://wa.me/593969533280' } // URL del owner
+    ],
+    
   ];
+
+  if (isAdmin(chatId) || isOwner(chatId)) {
+    // Si es admin, se añade el botón de Panel Admin en una nueva fila
+    keyboard.push([{ text: ' Panel Admin', callback_data: 'admin_menu' }]);
+  }
 
   return {
     text,
     options: {
-      parse_mode: 'HTML', // Cambiado a HTML
+      parse_mode: 'HTML',
       reply_markup: { inline_keyboard: keyboard }
     }
   };
@@ -308,10 +341,9 @@ async function showMenu(chatId, currentUser) {
   // --- MANEJADORES DE COMANDOS ---
   // Comando /start - Usar el menú unificado (reemplazando sistema de tokens)
   bot.onText(/\/start/, async (msg) => {
-    // Ignorar si el mensaje viene de un callback query
     if (msg.callback_query) return;
     const chatId = msg.chat.id;
-    
+    await bot.sendChatAction(chatId, 'upload_video');
     // Admin siempre puede
     if (isAdmin(chatId) || isOwner(chatId)) {
       try { await bot.deleteMessage(chatId, msg.message_id); } catch (e) {}
@@ -493,6 +525,31 @@ async function showMenu(chatId, currentUser) {
       }
     }
   }
+  // --- Pega esta nueva función en tu archivo ---
+async function showMenuWithNotification(chatId, messageId, notificationText) {
+  try {
+    const currentUser = await getUser(chatId);
+    const whatsappConnected = await checkWhatsAppConnection(chatId, currentUser);
+    const menu = await buildMainMenu(chatId, currentUser, whatsappConnected);
+    
+    // 1. Añadimos la notificación temporal al texto del menú
+    const textWithNotification = `${notificationText}\n\n${menu.text}`;
+
+    // 2. Editamos el mensaje para mostrar el menú CON la notificación
+    await safeEditCaptionOrMedia(chatId, messageId, null, textWithNotification, menu.options.reply_markup, 'HTML');
+
+    // 3. Después de 4 segundos, volvemos a editar el mensaje para quitar la notificación
+    setTimeout(async () => {
+      // El segundo argumento es `null` para que no intente volver a buscar un `messageObj` que ya no necesita
+      await safeEditCaptionOrMedia(chatId, messageId, null, menu.text, menu.options.reply_markup, 'HTML');
+    }, 4000); // 4 segundos
+
+  } catch (e) {
+    console.error('Error en showMenuWithNotification:', e);
+    // Fallback por si todo falla
+    await showMenu(chatId, await getUser(chatId));
+  }
+}
   // --- MANEJADOR UNIFICADO DE CALLBACKS (edita el mensaje en lugar de borrarlo) ---
   bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
@@ -512,19 +569,29 @@ async function showMenu(chatId, currentUser) {
             break;
 
           case 'start_pairing': {
+            await bot.sendChatAction(chatId, 'typing');
+            await bot.editMessageReplyMarkup({ inline_keyboard: [[{ text: '⏳ Procesando...', callback_data: 'noop' }]] }, { chat_id: chatId, message_id: messageId });
+
             const menu = buildPairingMenu();
-            userStates[chatId] = { awaitingPairingNumber: true };
-            console.log(`[DEBUG] Estado establecido para ${chatId}:`, userStates[chatId]); // <--- AÑADE ESTA LÍNEA
-            // Usar helper con el objeto original del mensaje
+            // ▼▼▼ ESTA ES LA LÍNEA QUE CAMBIA ▼▼▼
+            userStates[chatId] = { awaitingPairingNumber: true, messageId: messageId }; 
+            // ▲▲▲ AHORA GUARDAMOS EL MESSAGEID ▲▲▲
+            
             await safeEditCaptionOrMedia(chatId, messageId, messageObj, menu.text, menu.options.reply_markup, menu.options.parse_mode);
             break;
           }
-
-          case 'change_prefix': {
-            userStates[chatId] = { awaitingNewPrefix: true };
-            const text = '<b>⚙️ Cambiar Prefijo</b>\n\nEnvía el nuevo prefijo que deseas usar (1-5 caracteres).';
+         case 'change_prefix': {
+            // Guardamos el messageId para poder editar el mensaje original después
+            userStates[chatId] = { awaitingNewPrefix: true, messageId: messageId };
+            
+            const text = 
+              `<blockquote>✏️ <b>Eitar prefijo:</b>\n\n`+
+              `Tu prefijo actual es <code>${getPrefix(chatId)}</code>\n\n` +
+              `<b>Por favor envia el nuevo prefijo que deseas usar</b>\n` +
+              `<i>Ej: ! / # $)</i></blockquote>`;
+              
             await safeEditCaptionOrMedia(chatId, messageId, messageObj, text, {
-              inline_keyboard: [[{ text: '⬅️ Volver al Menú', callback_data: 'back_to_menu' }]]
+              inline_keyboard: [[{ text: '⬅️ Cancelar y Volver', callback_data: 'back_to_menu' }]]
             }, 'HTML');
             break;
           }
@@ -622,133 +689,118 @@ bot.on('message', async (msg) => {
   // =================================================================
   // BLOQUE PARA MANEJAR EL CAMBIO DE PREFIJO
   // =================================================================
-  if (userStates[chatId]?.awaitingNewPrefix) {
+ if (userStates[chatId]?.awaitingNewPrefix) {
+    const messageId = userStates[chatId].messageId; // Obtenemos el ID del mensaje a editar
     const newPrefix = msg.text.trim();
+    
+    // Borramos el mensaje del usuario para mantener el chat limpio
+    try { await bot.deleteMessage(chatId, msg.message_id); } catch(e) {}
 
     if (newPrefix.length > 0 && newPrefix.length <= 5 && !/\s/.test(newPrefix)) {
       setPrefix(chatId, newPrefix);
       delete userStates[chatId]; // Limpiar el estado
       
-      const prefixMsg = await bot.sendMessage(chatId, `✅ Prefijo actualizado a: \`${newPrefix}\``, { parse_mode: 'Markdown' });
+      // 1. Mostramos la confirmación temporal editando el mensaje original
+      const confirmationText = `✅ <b>Éxito:</b> Tu prefijo ha sido actualizado a '<code>${newPrefix}</code>'`;
+      await safeEditCaptionOrMedia(chatId, messageId, null, confirmationText, undefined, 'HTML');
       
-      // Esperar un poco y luego volver al menú para que el usuario vea el mensaje
+      // 2. Después de 2.5 segundos, volvemos al panel principal.
+      // La confirmación "desaparece" porque editamos el mensaje de nuevo.
       setTimeout(async () => {
-        try {
-          // Usamos el ID del mensaje de confirmación para editarlo y volver al menú
-          await showOrEditMenu(chatId, prefixMsg.message_id);
-        } catch(e) {
-          // Si falla la edición, simplemente enviamos un nuevo menú
-          await showMenu(chatId, await getUser(chatId));
-        }
-      }, 2000);
+        await showOrEditMenu(chatId, messageId);
+      }, 2500);
 
     } else {
-      await bot.sendMessage(chatId, '❌ Prefijo inválido. Debe tener de 1 a 5 caracteres sin espacios.');
+      // Si el prefijo es inválido, avisamos y damos la opción de volver
+      const errorText = '❌ <b>Prefijo inválido.</b> Debe tener de 1 a 5 caracteres sin espacios.';
+      await safeEditCaptionOrMedia(chatId, messageId, null, errorText, {
+          inline_keyboard: [[{ text: '⬅️ Volver', callback_data: 'back_to_menu' }]]
+      }, 'HTML');
+      delete userStates[chatId];
     }
-    return; // Importante: terminar aquí para no procesar como número
+    return; // Importante: terminar aquí
   }
 
   // =================================================================
   // BLOQUE PARA MANEJAR EL NÚMERO DE TELÉFONO (PAIRING)
   // =================================================================
   if (userStates[chatId]?.awaitingPairingNumber) {
+    const messageId = userStates[chatId].messageId;
     const number = msg.text.replace(/[^0-9]/g, '');
 
-    // 1. Validar el número antes que nada
+    try { await bot.deleteMessage(chatId, msg.message_id); } catch(e) {}
+
     if (!/^\d{10,15}$/.test(number)) {
-      await bot.sendMessage(chatId, '❌ Número inválido. Asegúrate de incluir el código de país. Ejemplo: 593969533280');
-      return; // Salir si el número es incorrecto
+      const errorText = '❌ <b>Número inválido.</b>\n\nAsegúrate de incluir el código de país. Ejemplo: 593969533280';
+      await safeEditCaptionOrMedia(chatId, messageId, null, errorText, {
+          inline_keyboard: [[{ text: '⬅️ Volver', callback_data: 'back_to_menu' }]]
+      }, 'HTML');
+      delete userStates[chatId];
+      return;
     }
 
-    // Limpiar el estado para no procesar futuros mensajes
     delete userStates[chatId];
 
-    // 2. Enviar mensaje de espera y empezar el proceso
-    const processingMsg = await bot.sendMessage(chatId, '<blockquote>⏳ Generando código, por favor espera...</blockquote>', { parse_mode: 'HTML' });
-
     try {
-      // Iniciar la sesión de WhatsApp en segundo plano
+      await safeEditCaptionOrMedia(chatId, messageId, null, '<blockquote>⏳ Generando código, por favor espera...</blockquote>');
+
       startSession(chatId, number);
 
-      // 3. Bucle para esperar que aparezca el archivo con el código (máximo 30 segundos)
       let code = null, tries = 0;
       const sessionPath = path.join(__dirname, 'lib', 'pairing', String(chatId), number);
       const pairingFile = path.join(sessionPath, 'pairing.json');
 
       while (tries < 30 && !code) {
         if (fs.existsSync(pairingFile)) {
-          try {
-            const data = JSON.parse(fs.readFileSync(pairingFile));
-            code = data.code;
-          } catch (e) { /* El archivo puede estar escribiéndose, ignorar error temporal */ }
+          try { code = JSON.parse(fs.readFileSync(pairingFile)).code; } catch (e) {}
         }
         if (!code) {
-          await new Promise(r => setTimeout(r, 1000)); // Esperar 1 segundo
+          await new Promise(r => setTimeout(r, 1000));
           tries++;
         }
       }
 
-      // 4. Borrar el mensaje de "Generando..."
-      try { await bot.deleteMessage(chatId, processingMsg.message_id); } catch(e) {}
-
-      // 5. Si encontramos el código, mostrarlo
       if (code) {
-        await updateUserWhatsapp(chatId, number); // Actualizar DB ahora que tenemos código
-        console.log(`[✓] Código generado para el número ${number} del usuario ${chatId}`);
-
+        await updateUserWhatsapp(chatId, number);
+        
         const messageText = 
           `<blockquote>📱 <b>CÓDIGO DE VINCULACIÓN</b>\n\n` +
           `🔑 <code>${code}</code>\n\n` +
-          `1️⃣ Abre WhatsApp\n` +
-          `2️⃣ Ve a <b>Dispositivos Vinculados</b> > <b>Vincular un dispositivo</b>\n` +
-          `3️⃣ Elige <b>Vincular con el número de teléfono</b>\n` +
-          `4️⃣ Ingresa el código de arriba\n\n` +
+          `1️⃣ Abre WhatsApp > Dispositivos Vinculados\n` +
+          `2️⃣ Elige <b>Vincular con el número de teléfono</b>\n` +
+          `3️⃣ Ingresa el código de arriba\n\n` +
           `⏱️ <i>Tienes ~45 segundos antes de que expire.</i></blockquote>`;
+        
+        await safeEditCaptionOrMedia(chatId, messageId, null, messageText);
 
-        const pairingCodeMsg = await bot.sendMessage(chatId, messageText, { parse_mode: 'HTML' });
-
-        // 6. Monitorear la conexión final
         let connected = false;
         const checkInterval = setInterval(async () => {
           if (await isFullyConnected(sessionPath)) {
             connected = true;
             clearInterval(checkInterval);
-            
-            try {
-              await bot.deleteMessage(chatId, pairingCodeMsg.message_id);
-              await showMenu(chatId, await getUser(chatId)); // Mostrar el menú actualizado
-              await bot.sendMessage(chatId, '✅ <b>¡CONECTADO!</b>\n\nDispositivo vinculado exitosamente.', { parse_mode: 'HTML' });
-            } catch (e) {
-              console.error('[ERROR] Al enviar mensaje de conexión final:', e);
-            }
+            await showMenuWithNotification(chatId, messageId, '✅ <b>¡CONECTADO!</b> Dispositivo vinculado exitosamente.');
           }
-        }, 2000); // Revisar cada 2 segundos
+        }, 2000);
 
-        // 7. Timeout por si el usuario nunca escanea el código
         setTimeout(() => {
           clearInterval(checkInterval);
           if (!connected) {
-            try {
-              bot.editMessageText('<blockquote>❌ <b>Tiempo de espera agotado.</b>\n\nEl código de vinculación ha expirado. Por favor, intenta de nuevo.</blockquote>', {
-                chat_id: chatId,
-                message_id: pairingCodeMsg.message_id,
-                parse_mode: 'HTML'
-              });
-            } catch (e) {}
+            safeEditCaptionOrMedia(chatId, messageId, null, '<blockquote>❌ <b>Tiempo de espera agotado.</b>\n\nEl código ha expirado. Por favor, intenta de nuevo.</blockquote>', {
+              inline_keyboard: [[{ text: '⬅️ Volver', callback_data: 'back_to_menu' }]]
+            });
           }
-        }, 60000); // 60 segundos de tiempo límite total
+        }, 60000);
 
       } else {
-        // Si el código nunca se generó
-        throw new Error('No se pudo generar el código de emparejamiento.');
+        throw new Error('No se pudo generar el código.');
       }
-
     } catch (err) {
       console.error('Error durante el emparejamiento:', err);
-      try { await bot.deleteMessage(chatId, processingMsg.message_id); } catch(e) {}
-      await bot.sendMessage(chatId, '❌ Hubo un error al intentar conectar. Inténtalo de nuevo.');
+      await safeEditCaptionOrMedia(chatId, messageId, null, '<blockquote>❌ Hubo un error al intentar conectar. Inténtalo de nuevo.</blockquote>', {
+        inline_keyboard: [[{ text: '⬅️ Volver', callback_data: 'back_to_menu' }]]
+      });
     }
-    return; // Terminar el flujo del manejador de mensajes
+    return;
   }
 });
   // --- MANEJADORES DE COMANDOS ADMIN ---
@@ -892,7 +944,23 @@ bot.on('message', async (msg) => {
     saveAdminUsers();
     bot.sendMessage(chatId, `✅ Usuario ${userId} eliminado de admin.`);
   });
-
+  /*
+  async function sendAdminMenu(chatId, messageId = null, messageObj = null) {
+    const text = `<b>🔧 Panel de Administración</b>\n\n` +
+                 `Usuarios premium: <code>${Array.isArray(premiumUsers) ? premiumUsers.length : 0}</code>\n\n` +
+                 `Acciones disponibles:`;
+    const reply_markup = {
+      inline_keyboard: [
+        // --- NUEVO BOTÓN CON WEB APP ---
+        [{ text: '🖥️ Abrir Panel Web (Avanzado)', web_app: { url: 'https://telegram.org' } }], // <-- ¡REEMPLAZA ESTA URL CON LA TUYA!
+        // --- TUS BOTONES ANTIGUOS ---
+        [{ text: '📋 Ver Premium', callback_data: 'admin_cekregis' }],
+        [{ text: '📝 Cómo regis', callback_data: 'admin_show_regis_hint' }],
+        [{ text: '👥 Gestionar Admins', callback_data: 'admin_manage_admins' }],
+        [{ text: '⬅️ Volver al Menú', callback_data: 'back_to_menu' }]
+      ]
+    }};*/
+    // ... el resto de tu función sendAdminMenu continúa sin cambios ...
   // Función para el menú de administración
   async function sendAdminMenu(chatId, messageId = null, messageObj = null) {
     const text = `<b>🔧 Panel de Administración</b>\n\n` +

