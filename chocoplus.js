@@ -7,7 +7,7 @@ const { getUser, updateUserWhatsapp, clearUserWhatsapp, isActive, db, deleteUser
 const os = require('os');
 const { getPrefix, setPrefix } = require('./lib/prefixHandler.js');
 const TelegramBot = require('node-telegram-bot-api');     
-const { createNewToken, verifyAndActivateToken, hasValidAccess, getTokenStats, revokeTokenByTelegramId, getUsersWithAccess } = require('./lib/tokens.js');
+const moment = require('moment'); // nueva dependencia para fechas
 
 function isAdmin(id) {
   // Asegurarse que config.ADMIN_IDS exista y sea un array
@@ -95,12 +95,12 @@ const buildMainMenu = async (chatId, user, whatsappConnected) => {
   const text = 
     `<blockquote>📱 <b>XGHR-BOT V2</b>\n\n` +
     `${whatsappConnected ? UI.EMOJIS.ONLINE : UI.EMOJIS.OFFLINE} <b>Estado:</b> ${whatsappConnected ? 'Conectado' : 'Desconectado'}\n` +
-    `${UI.EMOJIS.ID} <b>ID:</b> <code>${chatId}</code>\n` +
+    `${UI.EMOJIS.ID} <b>IDIOMA:</b> <code>${chatId}</code>\n` +
     `${UI.EMOJIS.PREFIX} <b>Prefijo:</b> <code>${prefix}</code>\n\n` +
     `<b>Sistema</b>\n` +
     `RAM: ${sysInfo.usedMem}GB / ${sysInfo.totalMem}GB\n` +
     `Uptime: ${sysInfo.uptime}\n\n` +
-    `<b>Creditos a <a href="https://wa.me/526421147692">CREDITOS</a> ya que varias travas son suyas</b>\n\n` +
+    `<b>Creditos a <a href="https://wa.me/526421147692">PAZIN WEB</a> ya que varias travas son suyas</b>\n\n` +
     `<b>❝𝐎𝐰𝐧𝐞𝐫❞ :<a href="https://wa.me/593969533280">ꓚ⌊⌋ 𝙲𝙷𝙾𝙲𝙾𝙿𝙻𝚄𝚂 ⌊⌋ꓛ</a></b></blockquote>` ; // <-- Y AQUÍ PONES LA LÍNEA NUEVA, AFUERA.
 
   const keyboard = [
@@ -144,6 +144,129 @@ const buildPairingMenu = () => {
   };
 };
 
+// --- GESTIÓN DE ARCHIVOS premium.json y admin.json ---
+function ensureFileExists(filePath, defaultData = []) {
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, JSON.stringify(defaultData, null, 2));
+  }
+}
+
+function watchFile(filePath, updateCallback) {
+  fs.watch(filePath, (eventType) => {
+    if (eventType === 'change' || eventType === 'rename') {
+      try {
+        const updatedData = JSON.parse(fs.readFileSync(filePath));
+        updateCallback(updatedData);
+        console.log(`File ${filePath} updated successfully.`);
+      } catch (error) {
+        console.error(`Error updating ${filePath}:`, error.message);
+      }
+    }
+  });
+}
+
+// Archivos en la raíz del proyecto
+const PREMIUM_FILE = path.join(__dirname, 'premium.json');
+const ADMIN_FILE = path.join(__dirname, 'admin.json');
+
+// Asegurar existencia
+ensureFileExists(PREMIUM_FILE, []);
+ensureFileExists(ADMIN_FILE, []);
+
+// Cargar en memoria
+let premiumUsers = JSON.parse(fs.readFileSync(PREMIUM_FILE, 'utf8'));
+let adminUsers = JSON.parse(fs.readFileSync(ADMIN_FILE, 'utf8'));
+
+// Vigilar cambios externos
+watchFile(PREMIUM_FILE, (data) => (premiumUsers = data));
+watchFile(ADMIN_FILE, (data) => (adminUsers = data));
+
+// Funciones para guardar
+function savePremiumUsers() {
+  fs.writeFileSync(PREMIUM_FILE, JSON.stringify(premiumUsers, null, 2));
+}
+function saveAdminUsers() {
+  fs.writeFileSync(ADMIN_FILE, JSON.stringify(adminUsers, null, 2));
+}
+
+// --- UTILIDADES DE PERMISOS ---
+function normalizeId(id) {
+  // Acepta number o string, devuelve Number
+  return Number(String(id).replace(/\D/g, ''));
+}
+
+function isAdmin(id) {
+  const nid = normalizeId(id);
+  return Array.isArray(adminUsers) && adminUsers.map(normalizeId).includes(nid);
+}
+
+function isOwner(id) {
+  const owner = config.OWNER_ID;
+  if (Array.isArray(owner)) return owner.map(normalizeId).includes(normalizeId(id));
+  return normalizeId(owner) === normalizeId(id);
+}
+
+function getPremiumStatus(userId) {
+  const uid = normalizeId(userId);
+  const user = (Array.isArray(premiumUsers) ? premiumUsers : []).find(u => normalizeId(u.id) === uid);
+  if (user && user.expiresAt && new Date(user.expiresAt) > new Date()) {
+    return `Si - ${new Date(user.expiresAt).toLocaleString()}`;
+  } else {
+    return "No - Sin suscripción activa";
+  }
+}
+
+function isPremium(userId) {
+  const uid = normalizeId(userId);
+  const user = (Array.isArray(premiumUsers) ? premiumUsers : []).find(u => normalizeId(u.id) === uid);
+  return !!(user && user.expiresAt && new Date(user.expiresAt) > new Date());
+}
+
+// --- REEMPLAZO DE UPTIME con funciones de tredict.js ---
+const startTime = Math.floor(Date.now() / 1000);
+
+function formatRuntime(seconds) {
+  const days = Math.floor(seconds / (3600 * 24));
+  const hours = Math.floor((seconds % (3600 * 24)) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  return `${days}d ${hours}h ${minutes}m ${secs}s`;
+}
+
+function getBotRuntime() {
+  const now = Math.floor(Date.now() / 1000);
+  return formatRuntime(now - startTime);
+}
+
+// --- FUNCIONES DEL BOT ---
+/**
+ * Obtiene información del sistema
+ * @returns {Object} Objeto con información del sistema
+ */
+function getSystemInfo() {
+  const totalMemGB = Math.round(os.totalmem() / (1024 * 1024 * 1024) * 100) / 100;
+  const freememGB = Math.round(os.freemem() / (1024 * 1024 * 1024) * 100) / 100;
+  const usedMemGB = Math.round((totalMemGB - freememGB) * 100) / 100;
+  const uptime = getBotRuntime(); // <-- reemplazado
+  return {
+    totalMem: totalMemGB,
+    usedMem: usedMemGB,
+    uptime
+  };
+}
+
+// --- MEDIA ALEATORIA PARA SHOWMENU ---
+function getRandomMedia() {
+  const media = [
+    "https://files.catbox.moe/9fhk68.mp4",
+    "https://files.catbox.moe/8966ez.jpg",
+    "https://files.catbox.moe/7au4v4.mp4", 
+    "https://files.catbox.moe/4ypf0t.jpg",
+  ];
+  return media[Math.floor(Math.random() * media.length)];
+}
+
 // --- LÓGICA PRINCIPAL DEL BOT ---
 module.exports = function(bot, dependencies) {
   // Registrar comandos del bot
@@ -153,51 +276,56 @@ module.exports = function(bot, dependencies) {
 
 async function showMenu(chatId, currentUser) {
   try {
-    // 1. Cambiamos la ruta al archivo de video .mp4
-    const localAnimationPath = './src/kkk.mp4';
+    const mediaUrl = getRandomMedia();
+    const whatsappConnected = await checkWhatsAppConnection(chatId, currentUser);
+    const menu = await buildMainMenu(chatId, currentUser, whatsappConnected);
 
-    if (fs.existsSync(localAnimationPath)) {
-      const whatsappConnected = await checkWhatsAppConnection(chatId, currentUser);
-      const menu = await buildMainMenu(chatId, currentUser, whatsappConnected);
-
-      // 2. Cambiamos el método de bot.sendPhoto a bot.sendAnimation
-      return await bot.sendAnimation(chatId, fs.createReadStream(localAnimationPath), {
-          caption: menu.text,
-          parse_mode: menu.options.parse_mode,
-          reply_markup: menu.options.reply_markup
+    // Enviar media según extensión
+    const lower = mediaUrl.toLowerCase();
+    if (/\.(mp4|gif|mkv)$/.test(lower)) {
+      return await bot.sendAnimation(chatId, mediaUrl, {
+        caption: menu.text,
+        parse_mode: menu.options.parse_mode,
+        reply_markup: menu.options.reply_markup
       });
-      
+    } else if (/\.(jpe?g|png|webp)$/.test(lower)) {
+      return await bot.sendPhoto(chatId, mediaUrl, {
+        caption: menu.text,
+        parse_mode: menu.options.parse_mode,
+        reply_markup: menu.options.reply_markup
+      });
     } else {
-      console.error(`Error: El video no se encontró en la ruta: ${localAnimationPath}`);
-      const menu = await buildMainMenu(chatId, await getUser(chatId), false);
+      // fallback a texto si no se reconoce
       return await bot.sendMessage(chatId, menu.text, menu.options);
     }
   } catch (err) {
-    console.error("Error al enviar animación, enviando solo texto:", err);
+    console.error("Error al enviar media del menú, enviando solo texto:", err);
     const menu = await buildMainMenu(chatId, await getUser(chatId), false);
     return await bot.sendMessage(chatId, menu.text, menu.options);
   }
 }
 
   // --- MANEJADORES DE COMANDOS ---
-  // Comando /start - Usar el menú unificado
+  // Comando /start - Usar el menú unificado (reemplazando sistema de tokens)
   bot.onText(/\/start/, async (msg) => {
+    // Ignorar si el mensaje viene de un callback query
+    if (msg.callback_query) return;
     const chatId = msg.chat.id;
     
-    // Si es admin, permitir acceso directo
-    if (isAdmin(chatId)) {
+    // Admin siempre puede
+    if (isAdmin(chatId) || isOwner(chatId)) {
       try { await bot.deleteMessage(chatId, msg.message_id); } catch (e) {}
       await showMenu(chatId, await getUser(chatId));
       return;
     }
 
-    // Verificar si tiene acceso por token
-    if (!hasValidAccess(chatId)) {
-      userStates[chatId] = { awaitingToken: true };
+    // Verificar premium
+    if (!isPremium(chatId)) {
       await bot.sendMessage(chatId, 
         '*🔒 Acceso Restringido*\n\n' +
-        'Este bot requiere un token de acceso válido.\n' +
-        'Por favor, ingresa tu token:', 
+        'Este bot requiere una suscripción activa (premium).\n' +
+        'Si deseas acceder, contacta al administrador o pide registro.\n' +
+        'Comando disponible para administradores: /regis <id> <duracion>', 
         { parse_mode: 'Markdown' }
       );
       return;
@@ -208,24 +336,24 @@ async function showMenu(chatId, currentUser) {
     await showMenu(chatId, await getUser(chatId));
   });
 
-  // Comando /menu - Usar el mismo menú unificado
+  // Comando /menu - idéntico a /start
   bot.onText(/\/menu/, async (msg) => {
+    // Ignorar si el mensaje viene de un callback query
+    if (msg.callback_query) return;
     const chatId = msg.chat.id;
     
-    // Si es admin, permitir acceso directo
-    if (isAdmin(chatId)) {
+    if (isAdmin(chatId) || isOwner(chatId)) {
       try { await bot.deleteMessage(chatId, msg.message_id); } catch (e) {}
       await showMenu(chatId, await getUser(chatId));
       return;
     }
 
-    // Verificar si tiene acceso por token
-    if (!hasValidAccess(chatId)) {
-      userStates[chatId] = { awaitingToken: true };
+    if (!isPremium(chatId)) {
       await bot.sendMessage(chatId, 
         '*🔒 Acceso Restringido*\n\n' +
-        'Este bot requiere un token de acceso válido.\n' +
-        'Por favor, ingresa tu token:', 
+        'Este bot requiere una suscripción activa (premium).\n' +
+        'Si deseas acceder, contacta al administrador o pide registro.\n' +
+        'Comando disponible para administradores: /regis <id> <duracion>', 
         { parse_mode: 'Markdown' }
       );
       return;
@@ -236,6 +364,8 @@ async function showMenu(chatId, currentUser) {
   });
   // Comando /pairing (simplificado, ya que los botones lo manejan)
   bot.onText(/\/pairing/, async (msg) => {
+    // Ignorar si el mensaje viene de un callback query
+    if (msg.callback_query) return;
     const chatId = msg.chat.id;
     const user = await getUser(chatId);
     if (!user || !isActive(user)) {
@@ -249,499 +379,559 @@ async function showMenu(chatId, currentUser) {
   });
 
   // --- BLOQUEA EL EMPAREJAMIENTO SI YA TIENE UN NÚMERO CONECTADO ---
-  bot.on('callback_query', async (query) => {
-    const chatId = query.message.chat.id;
-    const messageId = query.message.message_id;
-    const data = query.data;
-    
+  async function safeEditCaptionOrMedia(chatId, messageId, messageObj, text, reply_markup = undefined, parse_mode = 'HTML') {
+    // 1) intentar editar caption (para mensajes con media)
     try {
-      
-      // Resto de la lógica de callbacks existente
-      await bot.answerCallbackQuery(query.id);
-      
-      // Borrar mensaje anterior excepto en casos especiales
-      if (data !== 'show_prices') {
-        try { await bot.deleteMessage(chatId, messageId); } catch(e) {}
+      await bot.editMessageCaption(text, {
+        chat_id: chatId,
+        message_id: messageId,
+        parse_mode,
+        reply_markup
+      });
+      return;
+    } catch (e) {
+      // continuar con fallback
+    }
+
+    // 2) intentar editar como texto (para mensajes que tienen text)
+    try {
+      await bot.editMessageText(text, {
+        chat_id: chatId,
+        message_id: messageId,
+        parse_mode,
+        reply_markup
+      });
+      return;
+    } catch (e) {
+      // continuar con fallback
+    }
+
+    // 3) intentar editar media reusando el file_id del mensaje original y establecer caption
+    try {
+      if (!messageObj) throw new Error('No message object available for media fallback');
+
+      let mediaFileId = null;
+      let mediaType = null;
+
+      if (messageObj.animation && messageObj.animation.file_id) {
+        mediaFileId = messageObj.animation.file_id;
+        mediaType = 'animation';
+      } else if (messageObj.video && messageObj.video.file_id) {
+        mediaFileId = messageObj.video.file_id;
+        mediaType = 'video';
+      } else if (messageObj.photo && Array.isArray(messageObj.photo) && messageObj.photo.length) {
+        mediaFileId = messageObj.photo[messageObj.photo.length - 1].file_id;
+        mediaType = 'photo';
+      } else if (messageObj.document && messageObj.document.file_id) {
+        mediaFileId = messageObj.document.file_id;
+        mediaType = 'document';
       }
 
-      switch(query.data) {
-        case 'start_pairing': {
-          try {
+      if (!mediaFileId || !mediaType) throw new Error('No media available to edit');
+
+      const newMedia = {
+        type: mediaType,
+        media: mediaFileId,
+        caption: text,
+        parse_mode
+      };
+
+      await bot.editMessageMedia(newMedia, {
+        chat_id: chatId,
+        message_id: messageId,
+        reply_markup
+      });
+      return;
+    } catch (e) {
+      // último recurso: enviar mensaje nuevo (temporal)
+      try {
+        const tmp = await bot.sendMessage(chatId, text, { parse_mode, reply_markup });
+        // borrar temporal después si hace falta
+        setTimeout(() => { try { bot.deleteMessage(chatId, tmp.message_id); } catch (err) {} }, 8000);
+      } catch (err) {
+        console.error('safeEditCaptionOrMedia fallback failed:', err.message);
+      }
+    }
+  }
+
+  // Helper: editar el mensaje actual para volver/actualizar el menú principal (media + caption + botones)
+  async function showOrEditMenu(chatId, messageId) {
+    try {
+      const currentUser = await getUser(chatId);
+      const mediaUrl = getRandomMedia();
+      const whatsappConnected = await checkWhatsAppConnection(chatId, currentUser);
+      const menu = await buildMainMenu(chatId, currentUser, whatsappConnected);
+
+      const isVideo = /\.(mp4|gif|mkv)$/i.test(mediaUrl);
+      const newMedia = {
+        type: isVideo ? 'animation' : 'photo',
+        media: mediaUrl,
+        caption: menu.text,
+        parse_mode: menu.options.parse_mode
+      };
+
+      await bot.editMessageMedia(newMedia, {
+        chat_id: chatId,
+        message_id: messageId,
+        reply_markup: menu.options.reply_markup
+      });
+    } catch (err) {
+      // fallback: intentar editar sólo la caption; si falla, enviar menú nuevo
+      try {
+        const currentUser = await getUser(chatId);
+        const whatsappConnected = await checkWhatsAppConnection(chatId, currentUser);
+        const menu = await buildMainMenu(chatId, currentUser, whatsappConnected);
+        await bot.editMessageCaption(menu.text, {
+          chat_id: chatId,
+          message_id: messageId,
+          parse_mode: menu.options.parse_mode,
+          reply_markup: menu.options.reply_markup
+        });
+      } catch (e) {
+        console.error('showOrEditMenu failed, sending new menu via showMenu:', e.message);
+        await showMenu(chatId, await getUser(chatId));
+      }
+    }
+  }
+  // --- MANEJADOR UNIFICADO DE CALLBACKS (edita el mensaje en lugar de borrarlo) ---
+  bot.on('callback_query', async (query) => {
+    const chatId = query.message.chat.id;
+    console.log(`[DEBUG] Mensaje recibido de ${chatId}. Estado actual:`, userStates[chatId]); // <--- AÑADE ESTA LÍNEA
+    const messageId = query.message.message_id;
+    const data = query.data;
+    const messageObj = query.message; // pasar al helper cuando sea necesario
+
+    try {
+      await bot.answerCallbackQuery(query.id);
+
+      try {
+        switch (data) {
+          case 'back_to_menu':
+            // Usa editMessageMedia para volver al menú principal (cambia el video/foto)
+            await showOrEditMenu(chatId, messageId);
+            break;
+
+          case 'start_pairing': {
             const menu = buildPairingMenu();
-            // En lugar de editMessageText, enviamos un nuevo mensaje
-            await bot.sendMessage(chatId, menu.text, menu.options);
-          } catch (err) {
-            await handleError(err, chatId, bot);
+            userStates[chatId] = { awaitingPairingNumber: true };
+            console.log(`[DEBUG] Estado establecido para ${chatId}:`, userStates[chatId]); // <--- AÑADE ESTA LÍNEA
+            // Usar helper con el objeto original del mensaje
+            await safeEditCaptionOrMedia(chatId, messageId, messageObj, menu.text, menu.options.reply_markup, menu.options.parse_mode);
+            break;
           }
-          userStates[chatId] = { awaitingPairingNumber: true };
-          break;
-        }
 
-        case 'change_prefix': {
-          userStates[chatId] = { awaitingNewPrefix: true };
-          await bot.sendMessage(chatId, 
-            '*⚙️ Cambiar Prefijo*\n\n' +
-            'Envía el nuevo prefijo que deseas usar\n' +
-            'Ejemplo: !, #, /, bot\n\n' +
-            '_Debe tener entre 1 y 5 caracteres_', {
-            parse_mode: 'Markdown',
-            reply_markup: {
-              inline_keyboard: [[
-                { text: '⬅️ Volver al Menú', callback_data: 'back_to_menu' }
-              ]]
-            }
-          });
-          break;
-        }
-
-        case 'cancel_pairing':
-          delete userStates[chatId];
-          const cancelMsg = await bot.sendMessage(chatId, 'Conexión cancelada');
-          setTimeout(() => { try { bot.deleteMessage(chatId, cancelMsg.message_id); } catch (e) {} }, 5000);
-          break;
-
-        case 'show_menu':
-          await sendUserMenu(chatId);
-          break;
-
-        case 'disconnect_whatsapp':
-          try {
-            // Asegurarse de que la desconexión sea completa y forzada
-            const success = await cleanSession(chatId, false, true); // fullClean = true
-            
-            if (success) {
-              await bot.sendMessage(chatId, 'Tu sesion ha sido eliminada correctamente', {
-                reply_markup: {
-                  inline_keyboard: [[{ text: 'Iniciar sesion', callback_data: 'start_pairing' }]]
-                }
-              });
-            } else {
-              await bot.sendMessage(chatId, 'Error al eliminar su sesion por favor intente nuevamente');
-            }
-          } catch (err) {
-            console.error("Error en disconnect_whatsapp:", err);
-            await bot.sendMessage(chatId, 'Erorr');
+          case 'change_prefix': {
+            userStates[chatId] = { awaitingNewPrefix: true };
+            const text = '<b>⚙️ Cambiar Prefijo</b>\n\nEnvía el nuevo prefijo que deseas usar (1-5 caracteres).';
+            await safeEditCaptionOrMedia(chatId, messageId, messageObj, text, {
+              inline_keyboard: [[{ text: '⬅️ Volver al Menú', callback_data: 'back_to_menu' }]]
+            }, 'HTML');
+            break;
           }
-          break;
 
-        case 'admin_menu':
-          try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
-          await sendAdminMenu(chatId);
-          break;
-
-        case 'stats_admin':
-          bot.emit('text', { chat: { id: chatId }, text: '/stats', message_id: messageId });
-          break;
-
-        case 'panel_admin':
-          bot.emit('text', { chat: { id: chatId }, text: '/admin', message_id: messageId });
-          break;
-
-        case 'descargar_usuarios':
-          try {
-            await bot.sendDocument(chatId, path.join(__dirname, 'lib', 'users.json'));
-          } catch (e) {
-            await bot.sendMessage(chatId, 'Error al enviar el archivo.');
+          case 'disconnect_whatsapp': {
+            await cleanSession(chatId, false, true); // fullClean
+            const confirmText = 'Tu sesión ha sido eliminada correctamente.';
+            await safeEditCaptionOrMedia(chatId, messageId, messageObj, confirmText, {
+              inline_keyboard: [[{ text: 'Iniciar sesion', callback_data: 'start_pairing' }]]
+            }, 'HTML');
+            break;
           }
-          break;
 
-        case 'back_to_menu': {
-          delete userStates[chatId];
-          await showMenu(chatId, await getUser(chatId));
-          break;
+         // PEGA ESTE CÓDIGO MEJORADO
+case 'admin_menu':
+  // Se pasa messageObj para que la función pueda editar el mensaje original
+  await sendAdminMenu(chatId, messageId, messageObj);
+  break;
+
+case 'admin_cekregis': {
+  let text = "<b>📋 Lista de Usuarios Premium</b>\n\n";
+  if (!premiumUsers || premiumUsers.length === 0) {
+    text += "No hay usuarios premium registrados.";
+  } else {
+    // Usamos la información que ya tenemos en memoria
+    premiumUsers.forEach((u, i) => {
+      text += `${i+1}. 🆔 <code>${u.id}</code>\n` +
+              `   └── ⏳ Expira: ${moment(u.expiresAt).format('YYYY-MM-DD HH:mm:ss')}\n`;
+    });
+  }
+
+  const reply_markup = {
+    inline_keyboard: [[{ text: '⬅️ Volver al Panel', callback_data: 'admin_menu' }]]
+  };
+  // Editamos el mensaje actual para mostrar la lista
+  await safeEditCaptionOrMedia(chatId, messageId, messageObj, text, reply_markup, 'HTML');
+  break;
+}
+
+case 'admin_show_regis_hint': {
+  const text = '<b>📝 Cómo Registrar Premium</b>\n\n' +
+               'Usa el comando <code>/regis &lt;id&gt; &lt;duracion&gt;</code>\n\n' +
+               '<b>Ejemplos:</b>\n' +
+               '<code>/regis 12345678 30d</code> (30 días)\n' +
+               '<code>/regis 12345678 12h</code> (12 horas)\n' +
+               '<code>/regis 12345678 60m</code> (60 minutos)';
+  const reply_markup = {
+    inline_keyboard: [[{ text: '⬅️ Volver al Panel', callback_data: 'admin_menu' }]]
+  };
+  await safeEditCaptionOrMedia(chatId, messageId, messageObj, text, reply_markup, 'HTML');
+  break;
+}
+
+case 'admin_manage_admins': {
+  const text = '<b>👥 Gestionar Administradores</b>\n\n' +
+               'Usa los siguientes comandos en el chat:\n\n' +
+               '<code>/addadmin &lt;id&gt;</code> - Añadir admin\n' +
+               '<code>/deladmin &lt;id&gt;</code> - Eliminar admin';
+  const reply_markup = {
+    inline_keyboard: [[{ text: '⬅️ Volver al Panel', callback_data: 'admin_menu' }]]
+  };
+  await safeEditCaptionOrMedia(chatId, messageId, messageObj, text, reply_markup, 'HTML');
+  break;
+}
+
+         // CÓDIGO NUEVO Y MEJORADO
+case 'cancel_pairing':
+  delete userStates[chatId]; // Importante para que no siga esperando el número
+  await showOrEditMenu(chatId, messageId); // ¡La magia está aquí!
+  break;
+
+          case 'show_menu':
+            // Si existe función que muestra menú de usuario en contexto, editar/mostrar
+            await showOrEditMenu(chatId, messageId);
+            break;
+
+          default:
+            // Otros callbacks pueden manejarse aquí o enviarse como mensajes temporales
+            console.log('Unhandled callback data:', data);
+            break;
         }
+      } catch (swErr) {
+        console.error(`Error en callback_query ('${data}'):`, swErr.message);
       }
     } catch (err) {
       await handleError(err, chatId, bot);
     }
   });
+  // CÓDIGO NUEVO (PARA PEGAR)
+// --- MANEJADOR DE MENSAJES DE TEXTO (NÚMEROS, PREFIJOS, ETC) ---
+bot.on('message', async (msg) => {
+  const chatId = msg.chat.id;
+  if (!msg.text) return; // Ignorar mensajes sin texto (stickers, fotos, etc.)
 
-  // Manejador de mensajes de texto (para recibir el número de teléfono o soporte)
-  bot.on('message', async (msg) => {
-    const chatId = msg.chat.id;
+  // =================================================================
+  // BLOQUE PARA MANEJAR EL CAMBIO DE PREFIJO
+  // =================================================================
+  if (userStates[chatId]?.awaitingNewPrefix) {
+    const newPrefix = msg.text.trim();
 
-    if (userStates[chatId]?.awaitingNewPrefix && msg.text) {
-      const newPrefix = msg.text.trim();
-      if (newPrefix.length > 0 && newPrefix.length <= 5 && !/\s/.test(newPrefix)) {
-        setPrefix(chatId, newPrefix);
-        delete userStates[chatId];
-        await bot.sendMessage(chatId, `✅ Prefijo actualizado a: \`${newPrefix}\``, { 
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: [[
-              { text: '⬅️ Volver al Menú', callback_data: 'back_to_menu' }
-            ]]
-          }
-        });
-      } else {
-        await bot.sendMessage(chatId, 'Prefijo inválido', {
-          reply_markup: {
-            inline_keyboard: [[
-              { text: '⬅️ Volver al Menú', callback_data: 'back_to_menu' }
-            ]]
-          }
-        });
-      }
-      return;
+    if (newPrefix.length > 0 && newPrefix.length <= 5 && !/\s/.test(newPrefix)) {
+      setPrefix(chatId, newPrefix);
+      delete userStates[chatId]; // Limpiar el estado
+      
+      const prefixMsg = await bot.sendMessage(chatId, `✅ Prefijo actualizado a: \`${newPrefix}\``, { parse_mode: 'Markdown' });
+      
+      // Esperar un poco y luego volver al menú para que el usuario vea el mensaje
+      setTimeout(async () => {
+        try {
+          // Usamos el ID del mensaje de confirmación para editarlo y volver al menú
+          await showOrEditMenu(chatId, prefixMsg.message_id);
+        } catch(e) {
+          // Si falla la edición, simplemente enviamos un nuevo menú
+          await showMenu(chatId, await getUser(chatId));
+        }
+      }, 2000);
+
+    } else {
+      await bot.sendMessage(chatId, '❌ Prefijo inválido. Debe tener de 1 a 5 caracteres sin espacios.');
+    }
+    return; // Importante: terminar aquí para no procesar como número
+  }
+
+  // =================================================================
+  // BLOQUE PARA MANEJAR EL NÚMERO DE TELÉFONO (PAIRING)
+  // =================================================================
+  if (userStates[chatId]?.awaitingPairingNumber) {
+    const number = msg.text.replace(/[^0-9]/g, '');
+
+    // 1. Validar el número antes que nada
+    if (!/^\d{10,15}$/.test(number)) {
+      await bot.sendMessage(chatId, '❌ Número inválido. Asegúrate de incluir el código de país. Ejemplo: 593969533280');
+      return; // Salir si el número es incorrecto
     }
 
-    if (userStates[chatId]?.awaitingSupport && msg.text) {
-    }
+    // Limpiar el estado para no procesar futuros mensajes
+    delete userStates[chatId];
 
-    // Manejador del número de teléfono (proceso de emparejamiento)
-    if (!userStates[chatId]?.awaitingPairingNumber || !msg.text) return;
+    // 2. Enviar mensaje de espera y empezar el proceso
+    const processingMsg = await bot.sendMessage(chatId, '<blockquote>⏳ Generando código, por favor espera...</blockquote>', { parse_mode: 'HTML' });
 
     try {
-        const number = msg.text.replace(/[^0-9]/g, '');
-        if (!/^\d{10,15}$/.test(number)) {
-            delete userStates[chatId];
-            const errorMsg = await bot.sendMessage(chatId, '*ERROR*: Debe tener entre 10 y 15 dígitos (ej: +593969533280).', { parse_mode: 'Markdown' });
-            setTimeout(() => { try { bot.deleteMessage(chatId, errorMsg.message_id); } catch (e) {} }, 5000);
-            return;
+      // Iniciar la sesión de WhatsApp en segundo plano
+      startSession(chatId, number);
+
+      // 3. Bucle para esperar que aparezca el archivo con el código (máximo 30 segundos)
+      let code = null, tries = 0;
+      const sessionPath = path.join(__dirname, 'lib', 'pairing', String(chatId), number);
+      const pairingFile = path.join(sessionPath, 'pairing.json');
+
+      while (tries < 30 && !code) {
+        if (fs.existsSync(pairingFile)) {
+          try {
+            const data = JSON.parse(fs.readFileSync(pairingFile));
+            code = data.code;
+          } catch (e) { /* El archivo puede estar escribiéndose, ignorar error temporal */ }
         }
-
-        const processingMsg = await bot.sendMessage(chatId, 'Generando código, por favor espera...');
-        
-        try {
-            // Primero actualizamos la base de datos
-            await updateUserWhatsapp(chatId, number).catch(e => {
-                console.error('[DB] Error actualizando usuario:', e);
-                throw e;
-            });
-            
-            console.log(`[✓] Número ${number} registrado para usuario ${chatId}`);
-            
-            // Luego iniciamos la sesión
-            await startSession(chatId, number);
-            
-            let code = null, tries = 0;
-            const sessionPath = path.join(__dirname, 'lib', 'pairing', String(chatId), number);
-            const pairingFile = path.join(sessionPath, 'pairing.json');
-            
-            while (tries < 30 && !code) {
-              if (fs.existsSync(pairingFile)) {
-                try {
-                  const data = JSON.parse(fs.readFileSync(pairingFile));
-                  code = data.code;
-                } catch (e) {}
-              }
-              if (!code) {
-                await new Promise(r => setTimeout(r, 1000));
-                tries++;
-              }
-            }
-
-            try { await bot.deleteMessage(chatId, processingMsg.message_id); } catch(e) {}
-
-            if (code) {
-              try {
-                  // Actualizar número en la base de datos
-                  await updateUserWhatsapp(chatId, number);
-                  console.log(`[✓] Número ${number} registrado para usuario ${chatId}`);
-
-                  const messageText = 
-                      `<blockquote>📱 <b>CÓDIGO DE VINCULACIÓN</b>\n\n` +
-                      `🔑 <code>${code}</code>\n\n` +
-                      `1️⃣ Abre WhatsApp\n` +
-                      `2️⃣ Vincular Dispositivo > vincular con número\n` +
-                      `3️⃣ Ingresa el código\n\n` +
-                      `⏱️ <i>Expira en 45 segundos</i></blockquote>`;
-
-                  const pairingCodeMsg = await bot.sendMessage(chatId, messageText, {
-                      parse_mode: 'HTML'
-                  });
-
-                  // Monitoreo de conexión mejorado
-                  let connected = false;
-                  const sessionPath = path.join(__dirname, 'lib', 'pairing', String(chatId), number);
-                  
-                  const checkInterval = setInterval(async () => {
-                      if (await isFullyConnected(sessionPath)) {
-                          connected = true;
-                          clearInterval(checkInterval);
-                          
-                          try {
-                              await bot.deleteMessage(chatId, pairingCodeMsg.message_id);
-                              await bot.sendMessage(chatId, 
-                                  '✅ *CONECTADO*\n\n' +
-                                  '• Dispositivo vinculado exitosamente\n' +
-                                  '• Usa /menu para ver los comandos', {
-                                  parse_mode: 'Markdown',
-                                  reply_markup: {
-                                      inline_keyboard: [[
-                                          { text: '⬅️ Volver al Menú', callback_data: 'back_to_menu' }
-                                  ]]
-                              }
-                          });
-                          } catch (e) {
-                              console.error('[ERROR] Al enviar mensaje de conexión:', e);
-                          }
-                      }
-                  }, 1000);
-
-                  // Timeout más corto
-                  setTimeout(() => {
-                      if (!connected) {
-                          clearInterval(checkInterval);
-                          try {
-                              bot.sendMessage(chatId, 
-                                  '❌ *Tiempo agotado*\n\n' +
-                                  'No se detectó la conexión.\n' +
-                                  'Intenta nuevamente.', {
-                                  parse_mode: 'Markdown',
-                                  reply_markup: {
-                                      inline_keyboard: [[
-                                          { text: '🔄 Reintentar', callback_data: 'start_pairing' }
-                                  ]]
-                              }
-                          });
-                          } catch (e) {
-                              console.error('[ERROR] Al enviar mensaje de timeout:', e);
-                          }
-                      }
-                  }, 45000);
-
-              } catch (e) {
-                  console.error('[ERROR] En proceso de pairing:', e);
-                  await bot.sendMessage(chatId, '❌ Error al vincular. Intenta nuevamente.');
-              }
-            } else {
-              await bot.sendMessage(chatId, 'No se pudo generar el codigo. Intenta nuevamente....');
-            }
-        } catch (e) {
-          console.error('Error en el proceso de pairing:', e);
-          try { await bot.deleteMessage(chatId, processingMsg.message_id); } catch(e) {}
-          await bot.sendMessage(chatId, 'Ocurrió un error al generar el código. Contacta al administrador.');
+        if (!code) {
+          await new Promise(r => setTimeout(r, 1000)); // Esperar 1 segundo
+          tries++;
         }
+      }
+
+      // 4. Borrar el mensaje de "Generando..."
+      try { await bot.deleteMessage(chatId, processingMsg.message_id); } catch(e) {}
+
+      // 5. Si encontramos el código, mostrarlo
+      if (code) {
+        await updateUserWhatsapp(chatId, number); // Actualizar DB ahora que tenemos código
+        console.log(`[✓] Código generado para el número ${number} del usuario ${chatId}`);
+
+        const messageText = 
+          `<blockquote>📱 <b>CÓDIGO DE VINCULACIÓN</b>\n\n` +
+          `🔑 <code>${code}</code>\n\n` +
+          `1️⃣ Abre WhatsApp\n` +
+          `2️⃣ Ve a <b>Dispositivos Vinculados</b> > <b>Vincular un dispositivo</b>\n` +
+          `3️⃣ Elige <b>Vincular con el número de teléfono</b>\n` +
+          `4️⃣ Ingresa el código de arriba\n\n` +
+          `⏱️ <i>Tienes ~45 segundos antes de que expire.</i></blockquote>`;
+
+        const pairingCodeMsg = await bot.sendMessage(chatId, messageText, { parse_mode: 'HTML' });
+
+        // 6. Monitorear la conexión final
+        let connected = false;
+        const checkInterval = setInterval(async () => {
+          if (await isFullyConnected(sessionPath)) {
+            connected = true;
+            clearInterval(checkInterval);
+            
+            try {
+              await bot.deleteMessage(chatId, pairingCodeMsg.message_id);
+              await showMenu(chatId, await getUser(chatId)); // Mostrar el menú actualizado
+              await bot.sendMessage(chatId, '✅ <b>¡CONECTADO!</b>\n\nDispositivo vinculado exitosamente.', { parse_mode: 'HTML' });
+            } catch (e) {
+              console.error('[ERROR] Al enviar mensaje de conexión final:', e);
+            }
+          }
+        }, 2000); // Revisar cada 2 segundos
+
+        // 7. Timeout por si el usuario nunca escanea el código
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          if (!connected) {
+            try {
+              bot.editMessageText('<blockquote>❌ <b>Tiempo de espera agotado.</b>\n\nEl código de vinculación ha expirado. Por favor, intenta de nuevo.</blockquote>', {
+                chat_id: chatId,
+                message_id: pairingCodeMsg.message_id,
+                parse_mode: 'HTML'
+              });
+            } catch (e) {}
+          }
+        }, 60000); // 60 segundos de tiempo límite total
+
+      } else {
+        // Si el código nunca se generó
+        throw new Error('No se pudo generar el código de emparejamiento.');
+      }
+
     } catch (err) {
-        console.error('[ERROR] Error general:', err);
-        await bot.sendMessage(chatId, 'Ocurrió un error inesperado. Por favor, intenta nuevamente.');
+      console.error('Error durante el emparejamiento:', err);
+      try { await bot.deleteMessage(chatId, processingMsg.message_id); } catch(e) {}
+      await bot.sendMessage(chatId, '❌ Hubo un error al intentar conectar. Inténtalo de nuevo.');
+    }
+    return; // Terminar el flujo del manejador de mensajes
+  }
+});
+  // --- MANEJADORES DE COMANDOS ADMIN ---
+  // Comando /regis para agregar usuarios premium
+  bot.onText(/\/regis(?:\s(.+))?/, async (msg, match) => {
+    // Ignorar si el mensaje viene de un callback query
+    if (msg.callback_query) return;
+    const chatId = msg.chat.id;
+    const senderId = msg.from.id;
+    if (!isAdmin(senderId) && !isOwner(senderId)) {
+      return bot.sendMessage(chatId, "Solo administradores pueden usar este comando.");
+    }
+
+    if (!match || !match[1]) {
+      return bot.sendMessage(chatId, "Uso: /regis <id> <duracion>. Ej: /regis 12345678 30d");
+    }
+
+    const parts = match[1].split(/\s+/);
+    if (parts.length < 2) {
+      return bot.sendMessage(chatId, "Debes especificar el ID y la duración. Ej: 30d, 12h, 60m");
+    }
+
+    const userId = normalizeId(parts[0]);
+    const duration = parts[1];
+    if (!/^\d+[dhm]$/.test(duration)) {
+      return bot.sendMessage(chatId, "Formato de duración inválido. Ejemplo: 30d, 12h, 60m");
+    }
+
+    const amount = parseInt(duration.slice(0, -1));
+    const unit = duration.slice(-1);
+
+    let expiresAt = moment();
+    if (unit === 'd') expiresAt = expiresAt.add(amount, 'days');
+    else if (unit === 'h') expiresAt = expiresAt.add(amount, 'hours');
+    else if (unit === 'm') expiresAt = expiresAt.add(amount, 'minutes');
+
+    const exists = premiumUsers.find(u => normalizeId(u.id) === userId);
+    if (!exists) {
+      premiumUsers.push({ id: userId, expiresAt: expiresAt.toISOString() });
+      savePremiumUsers();
+      bot.sendMessage(chatId, `✅ Usuario ${userId} registrado como premium hasta ${expiresAt.format('YYYY-MM-DD HH:mm:ss')}`);
+    } else {
+      exists.expiresAt = expiresAt.toISOString();
+      savePremiumUsers();
+      bot.sendMessage(chatId, `✅ Usuario ${userId} actualizado hasta ${expiresAt.format('YYYY-MM-DD HH:mm:ss')}`);
     }
   });
 
-  // Panel de administración solo para admin
-  bot.onText(/\/admin/, async (msg) => {
-    if (!isAdmin(msg.chat.id)) return;
-    await sendAdminMenu(msg.chat.id);
+  bot.onText(/\/delregis(?:\s(\d+))?/, (msg, match) => {
+    // Ignorar si el mensaje viene de un callback query
+    if (msg.callback_query) return;
+    const chatId = msg.chat.id;
+    const senderId = msg.from.id;
+
+    if (!isAdmin(senderId) && !isOwner(senderId)) {
+      return bot.sendMessage(chatId, "Solo administradores pueden usar este comando.");
+    }
+
+    if (!match || !match[1]) {
+      return bot.sendMessage(chatId, "Uso: /delregis <id>");
+    }
+
+    const userId = normalizeId(match[1]);
+    const idx = premiumUsers.findIndex(u => normalizeId(u.id) === userId);
+    if (idx === -1) {
+      return bot.sendMessage(chatId, `Usuario ${userId} no está en la lista premium.`);
+    }
+
+    premiumUsers.splice(idx, 1);
+    savePremiumUsers();
+    bot.sendMessage(chatId, `✅ Usuario ${userId} eliminado de premium.`);
   });
 
-  // Menú especial para admins con todos los comandos de administración
-  bot.onText(/\/adminmenu/, async (msg) => {
-    if (!isAdmin(msg.chat.id)) return;
-    await sendAdminMenu(msg.chat.id);
-  });
+  bot.onText(/\/cekregis/, (msg) => {
+    // Ignorar si el mensaje viene de un callback query
+    if (msg.callback_query) return;
+    const chatId = msg.chat.id;
+    const senderId = msg.from.id;
+    if (!isAdmin(senderId) && !isOwner(senderId)) {
+      return bot.sendMessage(chatId, "Solo administradores pueden usar este comando.");
+    }
 
-  // Menú admin interactivo (agrega botones para activar/desactivar free)
-  async function sendAdminMenu(chatId) {
-    const texto =
-      `🛠️ <b>Menú Especial Admin</b>\n\n` +
-      `Gestiona usuarios VIP, notificaciones y modo FREE:\n\n` +
-      `• <b>Agregar VIP</b>\n` +
-      `• <b>Notificar a VIPs</b>\n` +
-      `• <b>Ver estadísticas</b>\n` +
-      `• <b>Ver panel</b>\n` +
-      `• <b>Descargar usuarios</b>\n` +
-      `• <b>Activar/Desactivar FREE</b>\n`;
+    if (!premiumUsers || premiumUsers.length === 0) {
+      return bot.sendMessage(chatId, "No hay usuarios premium.");
+    }
 
-    bot.sendMessage(chatId, texto, {
-      parse_mode: 'HTML',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '➕ Agregar VIP', callback_data: 'admin_addvip' }],
-          [{ text: '📢 Notificar VIPs', callback_data: 'admin_notificar' }],
-          [{ text: '📊 Estadísticas', callback_data: 'admin_stats' }],
-          [{ text: '👑 Panel', callback_data: 'admin_panel' }],
-          [{ text: '⬇️ Descargar usuarios', callback_data: 'admin_descargar_usuarios' }],
-          [
-            { text: '🟢 Activar FREE', callback_data: 'admin_free_on' },
-            { text: '🔴 Desactivar FREE', callback_data: 'admin_free_off' }
-          ]
-        ]
-      }
+    let texto = "📌 Lista de usuarios premium:\n\n";
+    premiumUsers.forEach((u, i) => {
+      texto += `${i+1}. ID: \`${u.id}\` - Expira: ${u.expiresAt ? moment(u.expiresAt).format('YYYY-MM-DD HH:mm:ss') : 'N/A'}\n`;
     });
-  }
 
-  // Listener único para todos los botones admin (agrega lógica para free)
-  bot.on('callback_query', async (query) => {
-    const chatId = query.message.chat.id;
-    const messageId = query.message.message_id;
-    const data = query.data;
+    bot.sendMessage(chatId, texto, { parse_mode: 'Markdown' });
+  });
 
-    // Solo admins pueden usar el menú admin
-    if (data.startsWith('admin_') && !isAdmin(chatId)) return;
+  // --- COMANDOS DE ADMIN (solo owner puede gestionar admin.json) ---
+  bot.onText(/\/addadmin(?:\s(\d+))?/, (msg, match) => {
+    // Ignorar si el mensaje viene de un callback query
+    if (msg.callback_query) return;
+    const chatId = msg.chat.id;
+    const senderId = msg.from.id;
 
-    // Borra el mensaje del menú anterior para mantener limpio el chat
-    if (data.startsWith('admin_')) {
-      try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
+    if (!isOwner(senderId)) {
+      return bot.sendMessage(chatId, "Solo el owner puede agregar administradores.");
     }
 
-    switch (data) {
+    if (!match || !match[1]) {
+      return bot.sendMessage(chatId, "Uso: /addadmin <id>");
+    }
 
-      case 'admin_panel':
-        await sendAdminPanel(chatId);
-        break;
-
+    const userId = normalizeId(match[1]);
+    if (!adminUsers.map(normalizeId).includes(userId)) {
+      adminUsers.push(userId);
+      saveAdminUsers();
+      return bot.sendMessage(chatId, `✅ Usuario ${userId} agregado a admin.`);
+    } else {
+      return bot.sendMessage(chatId, `Usuario ${userId} ya es admin.`);
     }
   });
 
-  bot.on('message', async (msg) => {
+  bot.onText(/\/deladmin(?:\s(\d+))?/, (msg, match) => {
+    // Ignorar si el mensaje viene de un callback query
+    if (msg.callback_query) return;
     const chatId = msg.chat.id;
-    // Mantener esta lógica de token dentro del manejador de mensajes
-    if (userStates[chatId]?.awaitingToken && msg.text) {
-      const token = msg.text.trim().toUpperCase();
-      
-      if (verifyAndActivateToken(token, chatId)) {
-        delete userStates[chatId];
-        await bot.sendMessage(chatId, 
-          '✅ *Token Activado*\n\n' +
-          'Ahora tienes acceso al bot.\n' +
-          'Usa /menu para ver los comandos disponibles.',
-          { parse_mode: 'Markdown' }
-        );
-        await showMenu(chatId, await getUser(chatId));
-      } else {
-        await bot.sendMessage(chatId, 'Token inválido o ya utilizado.');
-      }
-      return;
+    const senderId = msg.from.id;
+
+    if (!isOwner(senderId)) {
+      return bot.sendMessage(chatId, "Solo el owner puede eliminar administradores.");
     }
+
+    if (!match || !match[1]) {
+      return bot.sendMessage(chatId, "Uso: /deladmin <id>");
+    }
+
+    const userId = normalizeId(match[1]);
+    const idx = adminUsers.map(normalizeId).indexOf(userId);
+    if (idx === -1) {
+      return bot.sendMessage(chatId, `Usuario ${userId} no es admin.`);
+    }
+
+    adminUsers.splice(idx, 1);
+    saveAdminUsers();
+    bot.sendMessage(chatId, `✅ Usuario ${userId} eliminado de admin.`);
   });
 
-  bot.onText(/\/newtoken/, async (msg) => {
-    const chatId = msg.chat.id;
-    
-    if (!isAdmin(chatId)) {
-      await bot.sendMessage(chatId, 'Solo administradores pueden usar este comando.');
-      return;
-    }
+  // Función para el menú de administración
+  async function sendAdminMenu(chatId, messageId = null, messageObj = null) {
+    const text = `<b>🔧 Panel de Administración</b>\n\n` +
+                 `Usuarios premium: <code>${Array.isArray(premiumUsers) ? premiumUsers.length : 0}</code>\n\n` +
+                 `Acciones disponibles:`;
+    const reply_markup = {
+      inline_keyboard: [
+        [{ text: '📋 Ver Premium', callback_data: 'admin_cekregis' }],
+        [{ text: '📝 Cómo regis', callback_data: 'admin_show_regis_hint' }],
+        [{ text: '👥 Gestionar Admins', callback_data: 'admin_manage_admins' }],
+        [{ text: '⬅️ Volver al Menú', callback_data: 'back_to_menu' }]
+      ]
+    };
 
     try {
-      const result = createNewToken();
-      await bot.sendMessage(chatId,
-        `✨ *Nuevo Token Generado*\n\n` +
-        `Token: \`${result.token}\`\n\n` +
-        `📊 *Estadísticas:*\n` +
-        `• Tokens disponibles: ${result.available}\n` +
-        `• Tokens usados: ${result.used}\n` +
-        `• Máximo permitido: ${result.max}`,
-        { parse_mode: 'Markdown' }
-      );
-    } catch (e) {
-      await bot.sendMessage(chatId, '❌ ' + (e.message || 'Error al generar el token.'));
-    }
-  });
-  
-  // Comando para eliminar un usuario
-  bot.onText(/\/deluser (\d+)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    if (!isAdmin(chatId)) {
-      await bot.sendMessage(chatId, 'Solo los administradores pueden usar este comando.');
-      return;
-    }
-
-    const userIdToDelete = Number(match[1]);
-    if (!userIdToDelete) {
-      await bot.sendMessage(chatId, 'Uso: /deluser <ID de Telegram>');
-      return;
-    }
-
-    try {
-      // Limpiar sesión de WhatsApp si existe
-      await cleanSession(userIdToDelete, false); // No notificar al usuario eliminado
-
-      // Revocar token
-      const tokenRevoked = revokeTokenByTelegramId(userIdToDelete);
-      
-      // Eliminar usuario de users.json
-      const userDeleted = await deleteUser(userIdToDelete);
-
-      let response = `Resultado para el ID ${userIdToDelete}:\n\n`;
-      response += tokenRevoked ? '✅ Token revocado.\n' : '⚠️ No se encontró token para revocar.\n';
-      response += userDeleted ? '✅ Usuario eliminado de la base de datos.\n' : '⚠️ Usuario no encontrado en la base de datos.\n';
-
-      await bot.sendMessage(chatId, response);
-
-    } catch (e) {
-      console.error('Error al eliminar usuario:', e);
-      await bot.sendMessage(chatId, `❌ Error al procesar la solicitud para el ID ${userIdToDelete}.`);
-    }
-  });
-
-  // Comando para listar usuarios con acceso
-  bot.onText(/\/users/, async (msg) => {
-    const chatId = msg.chat.id;
-    if (!isAdmin(chatId)) {
-      await bot.sendMessage(chatId, 'Solo los administradores pueden usar este comando.');
-      return;
-    }
-
-    try {
-      const usersWithAccess = getUsersWithAccess();
-      
-      if (usersWithAccess.length === 0) {
-        await bot.sendMessage(chatId, 'No hay usuarios con acceso actualmente.');
-        return;
-      }
-
-      let userListText = '👥 *Usuarios con Acceso*\n\n';
-      
-      for (const user of usersWithAccess) {
+      if (messageId && messageObj) {
+        await safeEditCaptionOrMedia(chatId, messageId, messageObj, text, reply_markup, 'HTML');
+      } else if (messageId) {
+        // Intentar editar texto (si no hay objeto de mensaje)
         try {
-          const chatInfo = await bot.getChat(user.telegramId);
-          const name = chatInfo.first_name || '';
-          const lastName = chatInfo.last_name || '';
-          const username = chatInfo.username ? `(@${chatInfo.username})` : '';
-          userListText += `• *ID:* \`${user.telegramId}\`\n`;
-          userListText += `  *Nombre:* ${name} ${lastName} ${username}\n\n`;
+          await bot.editMessageText(text, {
+            chat_id: chatId,
+            message_id: messageId,
+            parse_mode: 'HTML',
+            reply_markup
+          });
         } catch (e) {
-          userListText += `• *ID:* \`${user.telegramId}\`\n`;
-          userListText += `  *Nombre:* (No se pudo obtener)\n\n`;
-          console.error(`No se pudo obtener info para el chat ${user.telegramId}:`, e.message);
+          // fallback a enviar nuevo mensaje
+          await bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup });
         }
+      } else {
+        await bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup });
       }
-
-      await bot.sendMessage(chatId, userListText, { parse_mode: 'Markdown' });
-
-    } catch (e) {
-      console.error('Error al listar usuarios:', e);
-      await bot.sendMessage(chatId, '❌ Error al obtener la lista de usuarios.');
+    } catch (err) {
+      console.error('sendAdminMenu error:', err);
+      // En caso de fallo extremo, enviar mensaje simple
+      try { await bot.sendMessage(chatId, 'Error al abrir panel admin.'); } catch (e) {}
     }
-  });
-
-  // Botón de estadísticas
-  async function sendAdminStats(chatId) {
-    const users = JSON.parse(fs.readFileSync(path.join(__dirname, 'lib', 'users.json'), 'utf8'));
-    const now = new Date();
-    const vipActivos = users.filter(u => u.expires && new Date(u.expires) > now).length;
-    const total = users.length;
-    const sesionesWA = users.filter(u => u.whatsapp_number && u.whatsapp_number !== '').length;
-    let texto = `📊 <b>Estadísticas del Bot</b>\n\n`;
-    texto += `<b>Usuarios totales:</b> ${total}\n`;
-    texto += `<b>VIP activos:</b> ${vipActivos}\n`;
-    texto += `<b>Sesiones WhatsApp activas:</b> ${sesionesWA}\n`;
-    await bot.sendMessage(chatId, texto, { parse_mode: 'HTML' });
   }
-
-  // Botón de panel
-  async function sendAdminPanel(chatId) {
-    const users = JSON.parse(fs.readFileSync(path.join(__dirname, 'lib', 'users.json'), 'utf8'));
-    let texto = `👑 <b>Panel Admin</b>\n\n<b>Usuarios VIP:</b> ${users.length}\n`;
-    texto += users.map(u => `• <b>ID:</b> <code>${u.telegram_id}</code> | <b>Expira:</b> ${u.expires ? u.expires.split('T')[0] : 'N/A'} | <b>WA:</b> ${u.whatsapp_number || 'No vinculado'}`).join('\n');
-    await bot.sendMessage(chatId, texto, { parse_mode: 'HTML' });
-  }
-}
-
-// --- UTILIDADES DEL SISTEMA ---
-function getSystemInfo() {
-  const totalMemMB = Math.round(os.totalmem() / (1024 * 1024 * 1024) * 100) / 100;
-  const freememMB = Math.round(os.freemem() / (1024 * 1024 * 1024) * 100) / 100;
-  const usedMemMB = Math.round((totalMemMB - freememMB) * 100) / 100;
-  const uptime = Math.floor(process.uptime());
-  
-  return {
-    totalMem: totalMemMB,
-    usedMem: usedMemMB,
-    uptime: `${Math.floor(uptime/3600)}h ${Math.floor((uptime%3600)/60)}m`
-  };
 }
 
 // Auto-reload para desarrollo

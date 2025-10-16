@@ -16,45 +16,52 @@ if (cluster.isPrimary) {
         workers.push(worker);
     }
 
-    // --- LÓGICA DE RESTAURACIÓN CENTRALIZADA ---
-    setTimeout(() => {
-        console.log('\n[👑] MODO DIOS: Iniciando escaneo y distribución de sesiones...');
-        try {
-            // NOTA: La lógica de restauración ahora depende de 'users.json' en lugar de la base de datos.
-            // Asegúrate de que tu sistema de guardado de usuarios (users.js) genere este archivo.
-            // Si 'users.js' solo usa SQLite, necesitarás un mecanismo para exportar a JSON.
-            const dbPath = path.join(__dirname, 'lib', 'database.db');
-            const usersDB = require('./lib/users.js'); // Usamos el manejador de DB
+    setTimeout(async () => {
+        console.log('\n[👑] MODO DIOS: Iniciando escaneo y sincronización de sesiones...');
+        
+        const usersDB = require('./lib/users.js');
+        const allUsers = usersDB.getAllUsers();
+        const sessionsToRestore = [];
 
-            usersDB.db.all('SELECT * FROM users WHERE whatsapp_number IS NOT NULL AND whatsapp_number != ""', [], (err, activeSessions) => {
-                if (err) {
-                    console.error('[❌] MODO DIOS: Error al leer usuarios de la base de datos:', err);
-                    return;
-                }
+        // --- INICIO DE LA LÓGICA DE VALIDACIÓN (EL GUARDIA DE SEGURIDAD) ---
+        console.log(`[🔍] Verificando la integridad de ${allUsers.length} registros de usuario...`);
 
-                if (activeSessions && activeSessions.length > 0) {
-                    console.log(`[🔍] Se encontraron ${activeSessions.length} sesiones activas para restaurar.`);
-                    activeSessions.forEach((session, index) => {
-                        const workerIndex = index % workers.length;
-                        const targetWorker = workers[workerIndex];
-                        
-                        const sessionData = {
-                            type: 'START_SESSION',
-                            telegram_id: Number(session.telegram_id),
-                            whatsapp_number: session.whatsapp_number
-                        };
+        for (const user of allUsers) {
+            if (user.whatsapp_number) {
+                const sessionPath = path.join(__dirname, 'lib', 'pairing', String(user.telegram_id), user.whatsapp_number);
+                const credsPath = path.join(sessionPath, 'creds.json');
 
-                        console.log(`[✈️] Enviando sesión ${sessionData.whatsapp_number} al Clon #${workerIndex + 1} (PID: ${targetWorker.process.pid})`);
-                        targetWorker.send(sessionData);
+                // Verificamos si la "entrada" (creds.json) existe
+                if (fs.existsSync(credsPath)) {
+                    // Si existe, es una sesión válida. La añadimos a la lista para restaurar.
+                    sessionsToRestore.push({
+                        telegram_id: user.telegram_id,
+                        whatsapp_number: user.whatsapp_number
                     });
                 } else {
-                    console.log('[✅] No se encontraron sesiones para restaurar.');
+                    // Si NO existe, es una "sesión fantasma". La limpiamos de la base de datos.
+                    console.log(`[🧹] Se encontró una sesión fantasma para ${user.whatsapp_number}. Limpiando registro...`);
+                    await usersDB.clearUserWhatsapp(user.telegram_id);
                 }
-            });
-        } catch (err) {
-            console.error('[❌] MODO DIOS: Error crítico durante la restauración de sesiones:', err);
+            }
         }
-    }, 5000); // Retraso para asegurar que los workers estén listos
+        // --- FIN DE LA LÓGICA DE VALIDACIÓN ---
+
+        // Distribuimos únicamente las sesiones que pasaron la validación
+        if (sessionsToRestore.length > 0) {
+            console.log(`[✅] ${sessionsToRestore.length} sesiones válidas serán restauradas.`);
+            sessionsToRestore.forEach((session, index) => {
+                const workerIndex = index % workers.length;
+                const targetWorker = workers[workerIndex];
+                const sessionData = { type: 'START_SESSION', ...session };
+                console.log(`[✈️] Enviando sesión ${session.whatsapp_number} al Clon #${workerIndex + 1} (PID: ${targetWorker.process.pid})`);
+                targetWorker.send(sessionData);
+            });
+        } else {
+            console.log('[✅] No se encontraron sesiones válidas para restaurar.');
+        }
+
+    }, 5000);
 
     cluster.on('exit', (worker, code, signal) => {
         console.error(`[☠️] CLON ${worker.process.pid} HA MUERTO. ¡RESUCITANDO INSTANTÁNEAMENTE!`);
@@ -68,58 +75,37 @@ if (cluster.isPrimary) {
     });
 
 } else {
-    // --- CÓDIGO EJECUTADO POR CADA CLON DEL BOT ---
-
+    // El código de los clones no cambia
     console.log(`[⚡] Clon de Bot ${process.pid} iniciado y listo para la batalla.`);
-
-    // --- PARCHE DE EMERGENCIA: ANULACIÓN DE I/O BLOQUEANTE ---
     const originalReadFileSync = fs.readFileSync;
     const fileCache = new Map();
-
     const filesToCache = [
-        './travas/ios4.js',
-        './travas/ios7.js',
-        './travas/ios6.js',
-        './travas/travadoc.js',
-        './travas/crash.zip',
-        './src/opa.webp',
-        './src/foto.jpg',
-        './src/thumb.jpg',
-        './media/thumb.jpg',
-        './media/ola.jpg'
-        // ...añade CUALQUIER otro archivo que leas con fs.readFileSync
+        './travas/ios4.js', './travas/ios7.js', './travas/ios6.js',
+        './travas/travadoc.js', './travas/crash.zip', './src/opa.webp',
+        './src/foto.jpg', './src/thumb.jpg', './media/thumb.jpg', './media/ola.jpg'
     ];
 
-    console.log(`[🧠] Clon ${process.pid}: Precargando ${filesToCache.length} assets en RAM para velocidad luz...`);
-    for (const filePath of filesToCache) {
+    console.log(`[🧠] Clon ${process.pid}: Precargando ${filesToCache.length} assets en RAM...`);
+    filesToCache.forEach(filePath => {
         try {
             const absolutePath = path.resolve(__dirname, filePath);
             const fileContent = originalReadFileSync(absolutePath);
             fileCache.set(absolutePath, fileContent);
-        } catch (error) {
-            // No hacemos nada si el archivo no existe, para evitar crashes
-        }
-    }
+        } catch (error) {}
+    });
 
-    // Sobrescribimos fs.readFileSync con nuestra versión "cacheada"
     fs.readFileSync = (filePath, options) => {
-        // --- INICIO DE LA CORRECCIÓN ---
-        // Convertimos el argumento a string, ya sea un texto o un objeto URL
         let pathAsString = filePath;
         if (filePath instanceof URL) {
             pathAsString = fileURLToPath(filePath);
         }
-        // --- FIN DE LA CORRECCIÓN ---
-
-        const absolutePath = path.resolve(pathAsString); // Usamos la variable corregida
+        const absolutePath = path.resolve(pathAsString);
         if (fileCache.has(absolutePath)) {
             return fileCache.get(absolutePath);
-        } else {
-            return originalReadFileSync(filePath, options);
         }
+        return originalReadFileSync(filePath, options);
     };
     console.log(`[✅] Clon ${process.pid}: Parche de RAM aplicado y actualizado.`);
 
-    // --- ARRANQUE DEL BOT PRINCIPAL ---
     require('./main.js');
 }
