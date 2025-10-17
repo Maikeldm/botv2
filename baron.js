@@ -31,32 +31,10 @@ const logger = pino({ level: 'debug' });
 const crypto = require('crypto');
 
 const path = require('path')
-
-let pluginsLoaded = false; // <--- AÑADE ESTA LÍNEA (NUESTRO INTERRUPTOR)
+const { loadPlugins } = require('./pluginLoader.js');
+const commands = loadPlugins();
 module.exports = async (conn, m, chatUpdate, store, prefix) => {
 try {
-  if (!pluginsLoaded) {
-        conn.commands = new Map();
-        const pluginsPath = path.join(__dirname, 'plugins');
-        // LÍNEA CORRECTA
-const pluginFiles = fs.readdirSync(pluginsPath).filter(file => file.endsWith('.js'));
-
-        for (const file of pluginFiles) {
-            const filePath = path.join(pluginsPath, file);
-            const command = require(filePath);
-
-            if ('name' in command && 'execute' in command) {
-                conn.commands.set(command.name, command);
-                if (command.alias && Array.isArray(command.alias)) {
-                    command.alias.forEach(alias => conn.commands.set(alias, command));
-                }
-                console.log(`[PLUGINS] Cargado: ${command.name}`);
-            } else {
-                console.log(`[ADVERTENCIA] El plugin en ${filePath} no tiene la estructura correcta.`);
-            }
-        }
-        pluginsLoaded = true; // <-- Activamos el interruptor para que no se vuelva a ejecutar
-    }
 m.id = m.key.id
 m.chat = m.key.remoteJid
 m.fromMe = m.key.fromMe
@@ -893,70 +871,68 @@ async function IosInvisibleForce(conn, target) {
 }
 
 try {
-    const commandToExecute = conn.commands.get(command);
+    // ✅ Previene el error "Cannot read properties of undefined (reading 'get')"
+    if (!commands) {
+       console.error("Los comandos no están cargados. Revisar pluginLoader.js");
+       return;
+    }
+
+    const commandToExecute = commands.get(command);
 
     // Si el comando se encuentra en la colección de PLUGINS...
     if (commandToExecute) {
         
         // 1. Creamos el objeto 'context' con todas las variables útiles
-        // En baron.js
-const context = {
-    isCreator,
-    pushname,
-    from,
-    from2,
-    prefix,
-    reply,
-    sender,
-    isBot,
-    q,
-    args,
-    text,
-    isGroup: m.isGroup,
-    groupMetadata,
-    participants,
-    groupAdmins,
-    isBotAdmins,
-    isAdmins,
-    // --- AÑADE ESTAS LÍNEAS NUEVAS ---
-   generateWAMessageFromContent,
-          getAggregateVotesInPollMessage,
-          downloadContentFromMessage,
-          prepareWAMessageMedia,
-          useMultiFileAuthState,
-          generateMessageID,
-          generateIOSMessageID,
-          generateWAMessage,
-          makeInMemoryStore,
-          DisconnectReason,
-          areJidsSameUser,
-          getContentType,
-          decryptPollVote,
-          relayMessage,
-          jidDecode,
-          Browsers,
-          getDevice,
-          proto,
-    proto,
-    cataui,
-    groupid,
-    candList,
-    sleep,
-    web,
-    sekzo3,
-    ios4,
-    ios6,
-
-  
-    // ---------------------------------
-};
-
-        // 2. Ejecutamos el plugin y salimos para no caer en el switch
+        const context = {
+            isCreator,
+            pushname,
+            from,
+            from2,
+            prefix,
+            reply,
+            sender,
+            isBot,
+            q,
+            args,
+            text,
+            isGroup: m.isGroup,
+            groupMetadata,
+            participants,
+            groupAdmins,
+            isBotAdmins,
+            isAdmins,
+            generateWAMessageFromContent,
+            getAggregateVotesInPollMessage,
+            downloadContentFromMessage,
+            prepareWAMessageMedia,
+            useMultiFileAuthState,
+            generateMessageID,
+            generateIOSMessageID,
+            generateWAMessage,
+            makeInMemoryStore,
+            DisconnectReason,
+            areJidsSameUser,
+            getContentType,
+            decryptPollVote,
+            relayMessage,
+            jidDecode,
+            Browsers,
+            getDevice,
+            proto,
+            cataui,
+            groupid,
+            candList,
+            sleep,
+            web,
+            sekzo3,
+            ios4,
+            ios6,
+        };
         return await commandToExecute.execute(conn, m, args, context);
     }
 } catch (error) {
     console.error(`Error ejecutando el plugin '${command}':`, error);
-    return reply('Ocurrió un error al intentar ejecutar este comando.');
+    return reply('Error: Ocurrió un problema al ejecutar este comando.');
 }
 switch(command) {
   case "xhgr":

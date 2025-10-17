@@ -307,109 +307,67 @@ module.exports = function(bot, dependencies) {
   
   const { userStates, activeSessions, cleanSession, startSession, updateUserWhatsapp, clearUserWhatsapp } = dependencies;
 
-async function showMenu(chatId, currentUser) {
-  try {
-    const mediaUrl = getRandomMedia();
-    const whatsappConnected = await checkWhatsAppConnection(chatId, currentUser);
-    const menu = await buildMainMenu(chatId, currentUser, whatsappConnected);
+ async function showMenu(chatId, currentUser) {
+    try {
+      // Verificar permisos DENTRO de showMenu
+      if (!isPremium(chatId) && !isAdmin(chatId) && !isOwner(chatId)) {
+        const restrictedText = 
+            '<blockquote><b>🔒 Acceso Restringido</b>\n\n' +
+            'Este bot requiere una suscripción activa.\n\n' +
+            'Para adquirir acceso, contacta al administrador y envíale tu ID de usuario.</blockquote>\n\n' +
+            `<blockquote>🆔 <b>Tu ID de Usuario es:</b>\n<code>${chatId}</code></blockquote>\n`+
+            `<i>(Toca el ID para copiarlo)</i>`;
+        
+        const mediaUrl = getRandomMedia();
+        const options = {
+            caption: restrictedText,
+            parse_mode: 'HTML',
+            reply_markup: {
+                inline_keyboard: [[{ text: '💬 Contactar Soporte', url: 'https://wa.me/593969533280' }]]
+            }
+        };
+        const lower = mediaUrl.toLowerCase();
+        if (/\.(mp4|gif|mkv)$/.test(lower)) {
+          await bot.sendAnimation(chatId, mediaUrl, options);
+        } else {
+          await bot.sendPhoto(chatId, mediaUrl, options);
+        }
+        return;
+      }
 
-    // Enviar media según extensión
-    const lower = mediaUrl.toLowerCase();
-    if (/\.(mp4|gif|mkv)$/.test(lower)) {
-      return await bot.sendAnimation(chatId, mediaUrl, {
-        caption: menu.text,
-        parse_mode: menu.options.parse_mode,
-        reply_markup: menu.options.reply_markup
-      });
-    } else if (/\.(jpe?g|png|webp)$/.test(lower)) {
-      return await bot.sendPhoto(chatId, mediaUrl, {
-        caption: menu.text,
-        parse_mode: menu.options.parse_mode,
-        reply_markup: menu.options.reply_markup
-      });
-    } else {
-      // fallback a texto si no se reconoce
-      return await bot.sendMessage(chatId, menu.text, menu.options);
+      // Si tiene permisos, procede a mostrar el menú normal (sin temporizador)
+      const mediaUrl = getRandomMedia();
+      const whatsappConnected = await checkWhatsAppConnection(chatId, currentUser);
+      const menu = await buildMainMenu(chatId, currentUser, whatsappConnected);
+
+      const lower = mediaUrl.toLowerCase();
+      if (/\.(mp4|gif|mkv)$/.test(lower)) {
+        await bot.sendAnimation(chatId, mediaUrl, { caption: menu.text, parse_mode: menu.options.parse_mode, reply_markup: menu.options.reply_markup });
+      } else {
+        await bot.sendPhoto(chatId, mediaUrl, { caption: menu.text, parse_mode: menu.options.parse_mode, reply_markup: menu.options.reply_markup });
+      }
+
+    } catch (err) {
+      console.error("Error en showMenu:", err);
+      await bot.sendMessage(chatId, '❌ Ocurrió un error al mostrar el menú.');
     }
-  } catch (err) {
-    console.error("Error al enviar media del menú, enviando solo texto:", err);
-    const menu = await buildMainMenu(chatId, await getUser(chatId), false);
-    return await bot.sendMessage(chatId, menu.text, menu.options);
   }
-}
-
+  
   // --- MANEJADORES DE COMANDOS ---
-  // Comando /start - Usar el menú unificado (reemplazando sistema de tokens)
+  
   bot.onText(/\/start/, async (msg) => {
     if (msg.callback_query) return;
     const chatId = msg.chat.id;
-    await bot.sendChatAction(chatId, 'upload_video');
-    // Admin siempre puede
-    if (isAdmin(chatId) || isOwner(chatId)) {
-      try { await bot.deleteMessage(chatId, msg.message_id); } catch (e) {}
-      await showMenu(chatId, await getUser(chatId));
-      return;
-    }
-
-    // Verificar premium
-    if (!isPremium(chatId)) {
-      await bot.sendMessage(chatId, 
-        '*🔒 Acceso Restringido*\n\n' +
-        'Este bot requiere una suscripción activa (premium).\n' +
-        'Si deseas acceder, contacta al administrador o pide registro.\n' +
-        'Comando disponible para administradores: /regis <id> <duracion>', 
-        { parse_mode: 'Markdown' }
-      );
-      return;
-    }
-
-    // Usuario con acceso, mostrar menú
     try { await bot.deleteMessage(chatId, msg.message_id); } catch (e) {}
     await showMenu(chatId, await getUser(chatId));
   });
 
-  // Comando /menu - idéntico a /start
   bot.onText(/\/menu/, async (msg) => {
-    // Ignorar si el mensaje viene de un callback query
     if (msg.callback_query) return;
     const chatId = msg.chat.id;
-    
-    if (isAdmin(chatId) || isOwner(chatId)) {
-      try { await bot.deleteMessage(chatId, msg.message_id); } catch (e) {}
-      await showMenu(chatId, await getUser(chatId));
-      return;
-    }
-
-    if (!isPremium(chatId)) {
-      await bot.sendMessage(chatId, 
-        '*🔒 Acceso Restringido*\n\n' +
-        'Este bot requiere una suscripción activa (premium).\n' +
-        'Si deseas acceder, contacta al administrador o pide registro.\n' +
-        'Comando disponible para administradores: /regis <id> <duracion>', 
-        { parse_mode: 'Markdown' }
-      );
-      return;
-    }
-
     try { await bot.deleteMessage(chatId, msg.message_id); } catch (e) {}
     await showMenu(chatId, await getUser(chatId));
   });
-  // Comando /pairing (simplificado, ya que los botones lo manejan)
-  bot.onText(/\/pairing/, async (msg) => {
-    // Ignorar si el mensaje viene de un callback query
-    if (msg.callback_query) return;
-    const chatId = msg.chat.id;
-    const user = await getUser(chatId);
-    if (!user || !isActive(user)) {
-      const errorMsg = await bot.sendMessage(chatId, 'No tienes acceso VIP activo.', defineBuyOptions(chatId));
-      setTimeout(() => { try { bot.deleteMessage(chatId, errorMsg.message_id); } catch (e) {} }, 10000);
-      return;
-    }
-    // Disparamos la misma lógica que el botón para mantener consistencia
-    bot.emit('callback_query', { data: 'start_pairing', message: { chat: { id: chatId }, message_id: msg.message_id } });
-    try { await bot.deleteMessage(chatId, msg.message_id); } catch (e) {}
-  });
-
   // --- BLOQUEA EL EMPAREJAMIENTO SI YA TIENE UN NÚMERO CONECTADO ---
   async function safeEditCaptionOrMedia(chatId, messageId, messageObj, text, reply_markup = undefined, parse_mode = 'HTML') {
     // 1) intentar editar caption (para mensajes con media)
@@ -557,7 +515,33 @@ async function showMenuWithNotification(chatId, messageId, notificationText) {
     const messageId = query.message.message_id;
     const data = query.data;
     const messageObj = query.message; // pasar al helper cuando sea necesario
+const allowedForEveryone = ['back_to_menu']; 
 
+    if (!isPremium(chatId) && !isAdmin(chatId) && !isOwner(chatId) && !allowedForEveryone.includes(data)) {
+        await bot.answerCallbackQuery(query.id, { text: '🔒 Acceso denegado. Requiere suscripción.', show_alert: true });
+        
+        // Opcional pero recomendado: Actualiza el menú para que solo muestre el mensaje de error.
+        const restrictedText = 
+            '<blockquote><b>🔒 Acceso Restringido</b>\n\n' +
+            'Tu suscripción ha expirado o no está activa.\n\n' +
+            'Para renovar o adquirir acceso, por favor, contacta al administrador.</blockquote>';
+        
+        try {
+            await safeEditCaptionOrMedia(chatId, messageId, messageObj, restrictedText, {
+                inline_keyboard: [[{ text: '💬 Contactar Soporte', url: 'https://wa.me/593969533280' }]]
+            }, 'HTML');
+        } catch (e) {
+            // Si editar falla, envía uno nuevo como último recurso
+            await bot.sendMessage(chatId, restrictedText, { 
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [[{ text: '💬 Contactar Soporte', url: 'https://wa.me/593969533280' }]]
+                }
+            });
+        }
+        
+        return; // ¡IMPORTANTE! Detiene la ejecución aquí.
+    }
     try {
       await bot.answerCallbackQuery(query.id);
 

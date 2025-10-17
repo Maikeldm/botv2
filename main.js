@@ -37,7 +37,7 @@ const maxRetries = 10;
 let bot;
 if (!cluster.isWorker || cluster.worker.id === 1) {
     console.log(`[🤖] Worker ${process.pid} asignado como JEFE DE TELEGRAM.`);
-    const TOKEN = process.env.BOT_TOKEN || '8364260541:AAFiaqnSuF7BB3YeJcnKk6CWwnTp3cucM9I';
+    const TOKEN = process.env.BOT_TOKEN || '8470263467:AAEwJKUW_fYF1neu-Kwgspgdwn6xMeNHTec';
     bot = new TelegramBot(TOKEN, { polling: true });
 
     const chocoplusHandler = require('./chocoplus.js');

@@ -4,9 +4,24 @@ const fs = require('fs');
 const path = require('path');
 const { fileURLToPath } = require('url');
 
-const numWorkers = os.cpus().length;
+/**
+ * =================================================================
+ * MODO ESTABLE ACTIVADO
+ * =================================================================
+ * * La siguiente línea es la clave de todo. Al poner 'false && ...', la
+ * condición NUNCA se cumplirá. Esto desactiva de forma segura el
+ * código que crea múltiples clones (workers) y nos asegura que el bot
+ * siempre se ejecutará en el bloque 'else', como un único proceso
+ * con un solo cerebro y memoria persistente.
+ * * ¡Adiós a la inestabilidad!
+ * */
+if (false && cluster.isPrimary) {
 
-if (cluster.isPrimary) {
+    // NINGÚN CÓDIGO DENTRO DE ESTE BLOQUE SE EJECUTARÁ JAMÁS.
+    // Lo dejamos aquí por si en un futuro lejano quisieras revertir el cambio,
+    // simplemente cambiando 'false' por 'true'.
+
+    const numWorkers = os.cpus().length;
     console.log(`[🚀 MODO DIOS] Proceso Primario ${process.pid} activado.`);
     console.log(`[🔥] Desplegando ${numWorkers} clones del bot para máxima potencia.`);
 
@@ -15,68 +30,14 @@ if (cluster.isPrimary) {
         const worker = cluster.fork();
         workers.push(worker);
     }
-
-    setTimeout(async () => {
-        console.log('\n[👑] MODO DIOS: Iniciando escaneo y sincronización de sesiones...');
-        
-        const usersDB = require('./lib/users.js');
-        const allUsers = usersDB.getAllUsers();
-        const sessionsToRestore = [];
-
-        // --- INICIO DE LA LÓGICA DE VALIDACIÓN (EL GUARDIA DE SEGURIDAD) ---
-        console.log(`[🔍] Verificando la integridad de ${allUsers.length} registros de usuario...`);
-
-        for (const user of allUsers) {
-            if (user.whatsapp_number) {
-                const sessionPath = path.join(__dirname, 'lib', 'pairing', String(user.telegram_id), user.whatsapp_number);
-                const credsPath = path.join(sessionPath, 'creds.json');
-
-                // Verificamos si la "entrada" (creds.json) existe
-                if (fs.existsSync(credsPath)) {
-                    // Si existe, es una sesión válida. La añadimos a la lista para restaurar.
-                    sessionsToRestore.push({
-                        telegram_id: user.telegram_id,
-                        whatsapp_number: user.whatsapp_number
-                    });
-                } else {
-                    // Si NO existe, es una "sesión fantasma". La limpiamos de la base de datos.
-                    console.log(`[🧹] Se encontró una sesión fantasma para ${user.whatsapp_number}. Limpiando registro...`);
-                    await usersDB.clearUserWhatsapp(user.telegram_id);
-                }
-            }
-        }
-        // --- FIN DE LA LÓGICA DE VALIDACIÓN ---
-
-        // Distribuimos únicamente las sesiones que pasaron la validación
-        if (sessionsToRestore.length > 0) {
-            console.log(`[✅] ${sessionsToRestore.length} sesiones válidas serán restauradas.`);
-            sessionsToRestore.forEach((session, index) => {
-                const workerIndex = index % workers.length;
-                const targetWorker = workers[workerIndex];
-                const sessionData = { type: 'START_SESSION', ...session };
-                console.log(`[✈️] Enviando sesión ${session.whatsapp_number} al Clon #${workerIndex + 1} (PID: ${targetWorker.process.pid})`);
-                targetWorker.send(sessionData);
-            });
-        } else {
-            console.log('[✅] No se encontraron sesiones válidas para restaurar.');
-        }
-
-    }, 5000);
-
-    cluster.on('exit', (worker, code, signal) => {
-        console.error(`[☠️] CLON ${worker.process.pid} HA MUERTO. ¡RESUCITANDO INSTANTÁNEAMENTE!`);
-        const newWorker = cluster.fork();
-        const deadWorkerIndex = workers.findIndex(w => w.process.pid === worker.process.pid);
-        if (deadWorkerIndex !== -1) {
-            workers[deadWorkerIndex] = newWorker;
-        } else {
-            workers.push(newWorker);
-        }
-    });
+    // ...toda la lógica de sincronización de sesiones queda desactivada.
 
 } else {
-    // El código de los clones no cambia
-    console.log(`[⚡] Clon de Bot ${process.pid} iniciado y listo para la batalla.`);
+
+    // ✅ ESTE ES EL ÚNICO CÓDIGO QUE SE EJECUTARÁ AL INICIAR.
+    console.log(`[⚙️ MODO ESTABLE] Bot iniciado en proceso único (PID: ${process.pid}). ¡Máxima fiabilidad!`);
+
+    // Tu optimización de caché de RAM se mantiene, es una excelente práctica.
     const originalReadFileSync = fs.readFileSync;
     const fileCache = new Map();
     const filesToCache = [
@@ -85,13 +46,15 @@ if (cluster.isPrimary) {
         './src/foto.jpg', './src/thumb.jpg', './media/thumb.jpg', './media/ola.jpg'
     ];
 
-    console.log(`[🧠] Clon ${process.pid}: Precargando ${filesToCache.length} assets en RAM...`);
+    console.log(`[🧠] Precargando ${filesToCache.length} assets en la memoria RAM...`);
     filesToCache.forEach(filePath => {
         try {
             const absolutePath = path.resolve(__dirname, filePath);
             const fileContent = originalReadFileSync(absolutePath);
             fileCache.set(absolutePath, fileContent);
-        } catch (error) {}
+        } catch (error) {
+            // Ignoramos si un archivo no existe para no detener el arranque.
+        }
     });
 
     fs.readFileSync = (filePath, options) => {
@@ -105,7 +68,7 @@ if (cluster.isPrimary) {
         }
         return originalReadFileSync(filePath, options);
     };
-    console.log(`[✅] Clon ${process.pid}: Parche de RAM aplicado y actualizado.`);
+    console.log(`[👍] Optimización de RAM aplicada correctamente.`);
 
     require('./main.js');
 }
