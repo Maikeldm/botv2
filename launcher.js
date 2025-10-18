@@ -1,71 +1,111 @@
-// launcher.js (Nivel 5: Lanzador Dinámico - CORREGIDO)
+// launcher.js (Nivel 5: Lanzador Dinámico - Limpieza Amable)
 const cluster = require('cluster');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const { fileURLToPath } = require('url'); // <--- ¡Asegúrate que esta línea esté!
 const TelegramBot = require('node-telegram-bot-api');
-const usersDB = require('./lib/users.js'); //
-const chocoplusHandler = require('./chocoplus.js'); //
+const usersDB = require('./lib/users.js');
+const chocoplusHandler = require('./chocoplus.js');
 const dotenv = require('dotenv');
-const { fileURLToPath } = require('url');
 dotenv.config();
 
-// --- Variables Globales del Maestro ---
-// Usamos un Map para rastrear qué HIJO maneja qué SESIÓN (telegram_id)
-const sessionWorkers = new Map(); // <--- ¡NUEVO!
+const sessionWorkers = new Map();
 
-/**
- * =================================================================
- * MODO DIOS (NIVEL 5) ACTIVADO
- * =================================================================
- */
 if (cluster.isPrimary) {
     console.log(`[🚀 MAESTRO] Proceso Primario ${process.pid} activado.`);
     console.log(`[🔥] Modo: Aislamiento Total por Proceso (1 Sesión = 1 Proceso).`);
 
-    // --- Iniciar Telegram Bot SÓLO en el Maestro ---
     console.log(`[🤖 MAESTRO] Iniciando Jefe de Telegram...`);
-    const TOKEN = process.env.BOT_TOKEN || '8470263467:AAEwJKUW_fYF1neu-Kwgspgdwn6xMeNHTec'; //
+    const TOKEN = process.env.BOT_TOKEN || '8364260541:AAFiaqnSuF7BB3YeJcnKk6CWwnTp3cucM9I';
     const bot = new TelegramBot(TOKEN, { polling: true });
-    const userStates = {}; 
-    
-    chocoplusHandler(bot, { //
+    const userStates = {};
+
+    chocoplusHandler(bot, {
         userStates,
-        activeSessions: {}, // Los Hijos manejan esto
-        
-        cleanSession: (telegram_id, notifyUser = false, fullClean = false) => {
-            console.log(`[🧹 MAESTRO] Recibida orden de limpieza para ${telegram_id}`);
+        activeSessions: {},
+
+        // =================================================================
+        //            ¡FUNCIÓN DE LIMPIEZA CORREGIDA!
+        // =================================================================
+        cleanSession: async (telegram_id, notifyUser = false, fullClean = false) => { // Marcada como async para el fallback
+            console.log(`[🧹 MAESTRO] Recibida orden de limpieza para ${telegram_id} (Full: ${fullClean})`);
             const worker = sessionWorkers.get(telegram_id);
+
             if (worker) {
-                console.log(`[KILL] Matando al Hijo ${worker.process.pid} (Sesión ${telegram_id}).`);
-                worker.kill(); // Matamos al proceso Hijo
-                // El evento 'exit' de cluster se encargará de borrarlo del Map
+                console.log(`[MAESTRO] Enviando orden de limpieza (Full: ${fullClean}) al Hijo ${worker.process.pid}...`);
+
+                // 1. Enviamos la orden al Hijo para que se limpie él mismo
+                worker.send({ type: 'CLEAN_SESSION', telegram_id, notifyUser, fullClean });
+
+                // 2. Le damos 3 segundos al Hijo para terminar y salir limpiamente
+                const cleanupTimeout = setTimeout(() => {
+                    // Si después de 3 seg el Hijo sigue vivo...
+                    if (sessionWorkers.has(telegram_id)) {
+                        console.warn(`[KILL] El Hijo ${worker.process.pid} no terminó. Matando a la fuerza...`);
+                        worker.kill(); // Lo matamos
+                    }
+                }, 3000); // 3 segundos de gracia
+
+                // 3. Escuchamos si el Hijo termina antes del timeout
+                worker.once('exit', (code, signal) => {
+                    console.log(`[MAESTRO] Hijo ${worker.process.pid} (Sesión ${telegram_id}) ha terminado (Code: ${code}, Signal: ${signal}).`);
+                    clearTimeout(cleanupTimeout); // Cancelamos el "kill" forzado
+                    sessionWorkers.delete(telegram_id); // Lo quitamos del mapa
+                });
+
             } else {
-                console.warn(`[MAESTRO] Se pidió limpiar ${telegram_id} pero no se encontró ningún Hijo.`);
-                // Si el Hijo ya murió, le pedimos a la DB que limpie (por si acaso)
-                usersDB.clearUserWhatsapp(telegram_id); //
+                // --- Fallback si el Hijo ya no existía ---
+                console.warn(`[MAESTRO] Se pidió limpiar ${telegram_id} pero no se encontró ningún Hijo activo.`);
+                if (fullClean) {
+                    // Intentamos limpiar la DB
+                    try {
+                        await usersDB.clearUserWhatsapp(telegram_id); //
+                        console.log(`[MAESTRO] Fallback: Limpiado ${telegram_id} de la DB.`);
+                    } catch (err) {
+                        console.error(`[MAESTRO] Fallback DB clean failed for ${telegram_id}:`, err);
+                    }
+
+                    // Intentamos limpiar la carpeta desde el Maestro (último recurso)
+                    try {
+                        const user = await usersDB.getUser(telegram_id); //
+                        if (user && user.whatsapp_number) {
+                            const sessionPath = path.join(__dirname, 'lib', 'pairing', String(telegram_id), user.whatsapp_number);
+                            if (fs.existsSync(sessionPath)) {
+                                console.log(`[MAESTRO] Fallback: Intentando eliminar carpeta ${sessionPath}`);
+                                fs.rmSync(sessionPath, { recursive: true, force: true });
+                                console.log(`[MAESTRO] Fallback: Carpeta de sesión para ${telegram_id} eliminada.`);
+                            } else {
+                                console.log(`[MAESTRO] Fallback: Carpeta ${sessionPath} no encontrada.`);
+                            }
+                        } else {
+                            console.log(`[MAESTRO] Fallback: No se encontró número de WhatsApp para ${telegram_id} para eliminar carpeta.`);
+                        }
+                    } catch (e) {
+                        console.error(`[MAESTRO] Fallback folder removal failed for ${telegram_id}:`, e);
+                    }
+                }
             }
-        },
-        
+        }, // Fin cleanSession
+        // =================================================================
+
         startSession: (telegram_id, whatsapp_number) => {
             console.log(`[▶️ MAESTRO] Recibida orden de inicio para ${telegram_id}/${whatsapp_number}`);
             if (sessionWorkers.has(telegram_id)) {
                 console.warn(`[MAESTRO] ${telegram_id} ya tiene un Hijo. Matando al antiguo...`);
-                sessionWorkers.get(telegram_id).kill();
+                sessionWorkers.get(telegram_id).kill(); // Matamos al viejo antes de crear uno nuevo
+                // El 'exit' handler lo borrará del map
             }
-            // ¡Aquí está la magia!
             launchWorkerForSession({ telegram_id, whatsapp_number });
         },
-        
-        updateUserWhatsapp: usersDB.updateUserWhatsapp, //
-        clearUserWhatsapp: usersDB.clearUserWhatsapp //
-    });
-    
 
-    // --- Manejo de Workers Muertos ---
+        updateUserWhatsapp: usersDB.updateUserWhatsapp,
+        clearUserWhatsapp: usersDB.clearUserWhatsapp // Esta es la que usa el fallback
+    });
+
+    // --- Manejo de Workers Muertos (Simplificado) ---
     cluster.on('exit', (worker, code, signal) => {
-        console.error(`[❌ MAESTRO] Hijo ${worker.process.pid} murió (Señal: ${signal}, Código: ${code}).`);
-        // Buscamos a quién le pertenecía este Hijo para limpiarlo
+        // Buscamos a quién pertenecía para quitarlo del mapa si aún existe
         let telegram_id = null;
         for (const [id, w] of sessionWorkers.entries()) {
             if (w.process.pid === worker.process.pid) {
@@ -73,71 +113,53 @@ if (cluster.isPrimary) {
                 break;
             }
         }
-        
         if (telegram_id) {
-            console.log(`[MAESTRO] El Hijo ${worker.process.pid} pertenecía a ${telegram_id}. Limpiando del mapa...`);
+            console.log(`[MAESTRO] Hijo ${worker.process.pid} (Sesión ${telegram_id}) salió. Limpiando del mapa.`);
             sessionWorkers.delete(telegram_id);
+        } else {
+             console.error(`[❌ MAESTRO] Hijo ${worker.process.pid} murió inesperadamente (Señal: ${signal}, Código: ${code}). No estaba en el mapa.`);
         }
     });
 
     /**
-     * ¡FUNCIÓN CORREGIDA!
-     * Lanza un nuevo proceso Hijo (cluster.fork) para UNA SOLA sesión.
+     * Lanza un nuevo proceso Hijo para UNA SOLA sesión. (CORREGIDO)
      */
     function launchWorkerForSession(session) {
         console.log(`[LAUNCH] Creando nuevo Hijo para ${session.telegram_id}...`);
-        
         const worker = cluster.fork();
-        
-        // Guardamos la relación
-        sessionWorkers.set(session.telegram_id, worker);
-        
-        // =================================================================
-        //                       ¡AQUÍ ESTÁ EL FIX!
-        // =================================================================
-        // Ya no usamos 'worker.on('listening', ...)'
-        // Enviamos la orden de inmediato. El módulo 'cluster' de Node.js
-        // la pondrá en cola automáticamente hasta que el Hijo esté listo.
+        sessionWorkers.set(session.telegram_id, worker); // Guardamos la relación ANTES de enviar
+
+        // Enviamos la orden inmediatamente. Cluster la encola si es necesario.
         console.log(`[MAESTRO] Enviando tarea ${session.telegram_id} al nuevo Hijo ${worker.process.pid}`);
         worker.send({ type: 'START_SESSION', ...session });
     }
 
 
-    // --- Cargar y distribuir sesiones existentes al inicio ---
+    // --- Cargar sesiones existentes al inicio (Sin cambios) ---
     (async () => {
         console.log("[MAESTRO] Cargando sesiones existentes desde la DB...");
         try {
-            const allUsers = await usersDB.getAllUsersWithWhatsapp(); //
-            
+            const allUsers = await usersDB.getAllUsersWithWhatsapp();
             if (allUsers.length > 0) {
                 console.log(`[MAESTRO] ${allUsers.length} sesiones encontradas. Lanzando ${allUsers.length} Hijos...`);
-                
                 for (const user of allUsers) {
-                    // Lanza un Hijo por CADA usuario
                     launchWorkerForSession(user);
-                    // Pausa para no saturar el sistema operativo con 60 inicios de golpe
-                    await new Promise(r => setTimeout(r, 500)); // 0.5 segundos por Hijo
+                    await new Promise(r => setTimeout(r, 500));
                 }
                 console.log("[MAESTRO] ¡Todas las sesiones existentes han sido asignadas a sus Hijos!");
             } else {
                 console.log("[MAESTRO] No se encontraron sesiones existentes para reconectar.");
             }
-            
         } catch (e) {
             console.error("[MAESTRO] Error catastrófico cargando sesiones existentes:", e);
         }
-    })(); //
+    })();
 
 } else {
-
     // =================================================================
-    // CÓDIGO DEL WORKER (HIJO)
+    // CÓDIGO DEL WORKER (HIJO) - Sin cambios
     // =================================================================
-    // ¡Esta parte es idéntica a la anterior!
-    
     console.log(`[⚙️ HIJO] Bot iniciado en proceso hijo (PID: ${process.pid}). ¡Listo para recibir sesión!`);
-
-    // Tu optimización de caché de RAM
     const originalReadFileSync = fs.readFileSync;
     const fileCache = new Map();
     const filesToCache = [
@@ -152,9 +174,7 @@ if (cluster.isPrimary) {
             const absolutePath = path.resolve(__dirname, filePath);
             const fileContent = originalReadFileSync(absolutePath);
             fileCache.set(absolutePath, fileContent);
-        } catch (error) {
-            // Ignoramos si un archivo no existe
-        }
+        } catch (error) {}
     });
 
     fs.readFileSync = (filePath, options) => {
@@ -169,7 +189,5 @@ if (cluster.isPrimary) {
         return originalReadFileSync(filePath, options);
     };
     console.log(`[👍 HIJO ${process.pid}] Optimización de RAM aplicada.`);
-
-    // Este hijo ahora carga 'main.js', que maneja Baileys.
     require('./main.js');
 }
