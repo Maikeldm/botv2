@@ -33,6 +33,7 @@ const crypto = require('crypto');
 const path = require('path')
 const { loadPlugins } = require('./pluginLoader.js');
 const commands = loadPlugins();
+
 module.exports = async (conn, m, chatUpdate, store, prefix) => {
 try {
 m.id = m.key.id
