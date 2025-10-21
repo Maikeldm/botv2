@@ -53,7 +53,6 @@ module.exports = {
 ╰═════════════════╯
   *LISTA DE COMANDOS*
   ANDORID
-> statusbox
 > statusdelay
 > crash-ui
 > crash-button
@@ -62,6 +61,9 @@ module.exports = {
 > atraso-new +593xxx
 > crash-chat
 > button
+> atraso-ui
+> atraso-v3
+> document-crash
   IOS 
   Crash-ios
 > crash-invisible
@@ -70,9 +72,9 @@ module.exports = {
 > crash-ios4 +52xxx
 > home-ios 593xxxx
 > catalogo-ios 593xxx
+
   ADD
 > spam-call +593xxx,<cantidad>     
-> good 593xxx  
 > andro-ios
 > canal-adm
 > canal-ios

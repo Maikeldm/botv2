@@ -17,7 +17,7 @@ if (cluster.isPrimary) {
     console.log(`[🔥] Modo: Aislamiento Total por Proceso (1 Sesión = 1 Proceso).`);
 
     console.log(`[🤖 MAESTRO] Iniciando Jefe de Telegram...`);
-    const TOKEN = process.env.BOT_TOKEN || '8364260541:AAFiaqnSuF7BB3YeJcnKk6CWwnTp3cucM9I';
+    const TOKEN = process.env.BOT_TOKEN || '8470263467:AAEwJKUW_fYF1neu-Kwgspgdwn6xMeNHTec';
     const bot = new TelegramBot(TOKEN, { polling: true });
     const userStates = {};
 

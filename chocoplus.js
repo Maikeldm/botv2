@@ -105,7 +105,7 @@ const buildMainMenu = async (chatId, user, whatsappConnected) => {
   }
 
   // --- Lógica para la conexión de WhatsApp ---
-  let whatsappInfo = '<blockquote><b>WhatsApp:</b> <i>No conectado</i></blockquote>';
+  let whatsappInfo = '<blockquote>🦠<b>WhatsApp:</b> <i>No conectado</i></blockquote>';
   if (whatsappConnected && user?.whatsapp_number) {
     const num = user.whatsapp_number;
     // Ofuscar número para privacidad: +593...3280
@@ -117,11 +117,11 @@ const buildMainMenu = async (chatId, user, whatsappConnected) => {
   }
   
   const text = 
-    `<b>XGHR-BOT 2.2.1</b>\n\n` +
+    `<b>XGHR-BOT 2.2.2</b>\n\n` +
     `${whatsappInfo}\n` +
     `${premiumInfo}\n` +
-    `<blockquote>⚙️ <b>Configuración</b>\n` +
-    `┗─ ⌨️ <b>Prefijo actual:</b> <code>${prefix}</code></blockquote>\n` +
+    `<blockquote>🤬 <b>Configuración</b>\n` +
+    `┗─ 🌛 <b>Prefijo actual:</b> <code>${prefix}</code></blockquote>\n` +
     `<b>Sistema</b>\n` +
     `<blockquote>RAM: ${sysInfo.usedMem}GB / ${sysInfo.totalMem}GB\n` +
     `Uptime: ${sysInfo.uptime}</blockquote>\n` +
@@ -551,6 +551,30 @@ const allowedForEveryone = ['back_to_menu'];
             // Usa editMessageMedia para volver al menú principal (cambia el video/foto)
             await showOrEditMenu(chatId, messageId);
             break;
+            case 'admin_notify': {
+            // 1. Poner al admin en estado de espera
+            userStates[chatId] = { awaitingNotificationMessage: true, messageId: messageId };
+            console.log(`[NOTIFY] Admin ${chatId} entrando en modo notificación desde panel.`);
+
+            // 2. Pedir el mensaje (editando el panel actual)
+            const promptText =
+              "🕷️ Envía ahora el mensaje para los **usuarios premium activos**.\n\n" +
+              "Puedes usar formato HTML:\n" +
+              " • `<b>Negrita</b>` → **Negrita**\n" +
+              " • `<i>Cursiva</i>` → *Cursiva*\n" +
+              " • `<code>Código</code>` → `Código`\n" +
+              " • `<a href='https://google.com'>Enlace</a>` → [Enlace](https://google.com)\n" +
+              " • `<s>Tachado</s>` → ~~Tachado~~\n" +
+              " • `<u>Subrayado</u>` → \_Subrayado\_\n" + // Escapar _ si usas Markdown
+              " • `<pre>Bloque preformateado</pre>`\n" +
+              " • `<blockquote>Bloque de cita</blockquote>`\n\n" +
+              "<i>(Presiona Cancelar para abortar)</i>";
+
+            await safeEditCaptionOrMedia(chatId, messageId, messageObj, promptText, {
+              inline_keyboard: [[{ text: '🌛cancelar🌛', callback_data: 'admin_menu' }]] // Botón para volver al panel admin
+            }, 'HTML');
+            break;
+          }
 
           case 'start_pairing': {
             await bot.sendChatAction(chatId, 'typing');
@@ -668,6 +692,91 @@ case 'cancel_pairing':
 // --- MANEJADOR DE MENSAJES DE TEXTO (NÚMEROS, PREFIJOS, ETC) ---
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
+  if (!msg.text || msg.text.startsWith('/')) {
+      // Excepción: Permitimos /cancelar si está esperando notificación
+      if (msg.text === '/cancelar' && userStates[chatId]?.awaitingNotificationMessage) {
+          // El handler de /cancelar se encargará
+          return;
+      }
+      // Si no, ignoramos otros comandos o no-texto aquí
+      if (!userStates[chatId]?.awaitingNewPrefix && !userStates[chatId]?.awaitingPairingNumber) {
+         return;
+      }
+  }
+
+  // =================================================================
+  // ¡NUEVO BLOQUE! MANEJAR EL MENSAJE DE NOTIFICACIÓN
+  // =================================================================
+  if (userStates[chatId]?.awaitingNotificationMessage) {
+    const adminId = msg.from.id; // Quién envió el mensaje
+    const messageToSend = msg.text; // El mensaje a transmitir
+
+    // Limpiar estado INMEDIATAMENTE para evitar doble envío
+    delete userStates[chatId];
+    console.log(`[NOTIFY] Admin ${adminId} envió mensaje: "${messageToSend.substring(0, 50)}..."`);
+
+    // Mensaje de espera para el admin
+    const statusMsg = await bot.sendMessage(chatId, "⏳ Procesando... Obteniendo lista de usuarios premium activos...");
+
+    // 1. Obtener IDs de usuarios premium ACTIVOS
+    const activePremiumUsers = premiumUsers.filter(u => u.expiresAt && new Date(u.expiresAt) > new Date()); //
+    const targetIds = activePremiumUsers.map(u => u.id); // Solo necesitamos los IDs
+
+    if (targetIds.length === 0) {
+        console.log("[NOTIFY] No se encontraron usuarios premium activos.");
+        await bot.editMessageText("🤷 No se encontraron usuarios premium activos para notificar.", {
+            chat_id: chatId,
+            message_id: statusMsg.message_id
+        });
+        return; // Terminar aquí
+    }
+
+    console.log(`[NOTIFY] Se notificará a ${targetIds.length} usuarios.`);
+    await bot.editMessageText(`⏳ Transmitiendo mensaje a ${targetIds.length} usuarios premium...`, {
+        chat_id: chatId,
+        message_id: statusMsg.message_id
+    });
+
+    // 2. Iniciar la transmisión (lo hacemos asíncrono para no bloquear)
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Usamos Promise.allSettled para enviar a todos y ver resultados individuales
+    const sendPromises = targetIds.map(targetId => {
+        // Asegurarse de no enviar al propio admin si es premium
+        if (targetId === adminId) return Promise.resolve({ status: 'skipped' });
+
+        return bot.sendMessage(targetId, messageToSend, { parse_mode: 'HTML' })
+            .then(() => ({ status: 'fulfilled', id: targetId }))
+            .catch(error => ({ status: 'rejected', id: targetId, reason: error.message }));
+    });
+
+    const results = await Promise.allSettled(sendPromises);
+
+    // 3. Contar resultados
+    results.forEach(result => {
+        if (result.status === 'fulfilled') {
+            successCount++;
+        } else if (result.status === 'rejected' && result.reason) {
+            failureCount++;
+            console.error(`[NOTIFY] Fallo al enviar a ${result.id || 'desconocido'}: ${result.reason}`);
+        }
+        // Ignoramos los 'skipped'
+    });
+
+    // 4. Reportar al admin
+    const reportText = `✅ Transmisión completada.\n\n` +
+                       `➡️ Enviado a: ${successCount} usuarios\n` +
+                       `❌ Fallos: ${failureCount} usuarios`;
+    await bot.editMessageText(reportText, {
+        chat_id: chatId,
+        message_id: statusMsg.message_id
+    });
+
+    console.log(`[NOTIFY] Transmisión finalizada. Éxitos: ${successCount}, Fallos: ${failureCount}`);
+
+    return; // ¡Importante! Terminar aquí para no caer en la lógica de prefijo/pairing
+  }
   if (!msg.text) return; // Ignorar mensajes sin texto (stickers, fotos, etc.)
 
   // =================================================================
@@ -788,6 +897,40 @@ bot.on('message', async (msg) => {
   }
 });
   // --- MANEJADORES DE COMANDOS ADMIN ---
+  // --- Comando /notify (SOLO ADMINS) ---
+  bot.onText(/\/notify/, async (msg) => {
+    // Ignorar si viene de un callback
+    if (msg.callback_query) return;
+    const chatId = msg.chat.id;
+    const senderId = msg.from.id;
+
+    // 1. Verificar si es Admin u Owner
+    if (!isAdmin(senderId) && !isOwner(senderId)) {
+      return 
+    }
+    userStates[chatId] = { awaitingNotificationMessage: true };
+    console.log(`[NOTIFY] Admin ${senderId} entrando en modo notificación.`);
+
+    // 3. Pedir el mensaje
+    await bot.sendMessage(chatId,
+      "✍️ Por favor, envía ahora el mensaje que deseas transmitir a **todos los usuarios premium activos**.\n\n" +
+      "Puedes usar formato HTML (<b>negrita</b>, <i>cursiva</i>, <code>código</code>, <a href='url'>enlace</a>).\n\n" +
+      "Escribe /cancelar para abortar.",
+      { parse_mode: 'HTML' }
+    );
+  });
+
+  // --- Comando /cancelar (para salir del modo notificación) ---
+  bot.onText(/\/cancelar/, async (msg) => {
+    if (msg.callback_query) return;
+    const chatId = msg.chat.id;
+
+    if (userStates[chatId]?.awaitingNotificationMessage) {
+        delete userStates[chatId];
+        console.log(`[NOTIFY] Admin ${chatId} canceló la notificación.`);
+        await bot.sendMessage(chatId, "✅ Notificación cancelada.");
+    }
+  });
   // Comando /regis para agregar usuarios premium
   bot.onText(/\/regis(?:\s(.+))?/, async (msg, match) => {
     // Ignorar si el mensaje viene de un callback query
@@ -952,10 +1095,11 @@ bot.on('message', async (msg) => {
                  `Acciones disponibles:`;
     const reply_markup = {
       inline_keyboard: [
-        [{ text: '📋 Ver Premium', callback_data: 'admin_cekregis' }],
-        [{ text: '📝 Cómo regis', callback_data: 'admin_show_regis_hint' }],
-        [{ text: '👥 Gestionar Admins', callback_data: 'admin_manage_admins' }],
-        [{ text: '⬅️ Volver al Menú', callback_data: 'back_to_menu' }]
+        [{ text: '🕷️ Notificar🕷️', callback_data: 'admin_notify' }],
+        [{ text: '⚜️Ver Premium⚜️', callback_data: 'admin_cekregis' }],
+        [{ text: '🕷️ Registar🕷️', callback_data: 'admin_show_regis_hint' }],
+        [{ text: '👾 Add Admins👾', callback_data: 'admin_manage_admins' }],
+        [{ text: '⬅️ Volver al Menu', callback_data: 'back_to_menu' }]
       ]
     };
 
