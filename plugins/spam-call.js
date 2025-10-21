@@ -41,7 +41,7 @@ module.exports = {
                 await conn.offerCall(target);
                 console.log(`Llamada de voz #${i + 1} ofrecida a ${target}`);
                 if (cantidad > 1) {
-                    await sleep(5000);
+                    await sleep(6000);
                 }
             }
 

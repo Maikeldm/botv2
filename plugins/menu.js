@@ -56,7 +56,7 @@ module.exports = {
 > statusdelay
 > crash-ui
 > crash-button
-> crash-Chat
+> crash-chat
 > chat-freeze
 > atraso-new +593xxx
 > crash-chat

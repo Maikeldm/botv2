@@ -1,0 +1,50 @@
+{"level":30,"time":1761082218697,"pid":2808,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 2808] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761082218697,"pid":2808,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 2808] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761082218699,"pid":2808,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 2808] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761082359929,"pid":7148,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 7148] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761082359930,"pid":7148,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 7148] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761082359931,"pid":7148,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 7148] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761082473597,"pid":16328,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 16328] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761082473598,"pid":16328,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 16328] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761082473599,"pid":16328,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 16328] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761082671334,"pid":16328,"hostname":"DESKTOP-DF2SECE","msg":"[🔄] Reconexión para 593969533280 en 6s... (Intento 1/10)"}
+{"level":30,"time":1761082677560,"pid":16328,"hostname":"DESKTOP-DF2SECE","msg":"[▶️] Ejecutando reconexión para 593969533280..."}
+{"level":30,"time":1761082773607,"pid":16328,"hostname":"DESKTOP-DF2SECE","module":"GarbageCollector","msg":"[♻️] Ejecutando recolector de basura..."}
+{"level":30,"time":1761083393914,"pid":16328,"hostname":"DESKTOP-DF2SECE","msg":"[🔄] Reconexión para 593969533280 en 6s... (Intento 1/10)"}
+{"level":30,"time":1761083399941,"pid":16328,"hostname":"DESKTOP-DF2SECE","msg":"[▶️] Ejecutando reconexión para 593969533280..."}
+{"level":30,"time":1761084532665,"pid":2708,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 2708] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761084532665,"pid":2708,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 2708] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761084532667,"pid":2708,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 2708] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761084818730,"pid":2804,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 2804] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761084818731,"pid":2804,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 2804] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761084818732,"pid":2804,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 2804] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761084982505,"pid":11944,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 11944] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761084982506,"pid":11944,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 11944] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761084982508,"pid":11944,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 11944] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761085116578,"pid":10092,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 10092] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761085116579,"pid":10092,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 10092] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761085116582,"pid":10092,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 10092] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761085416594,"pid":10092,"hostname":"DESKTOP-DF2SECE","module":"GarbageCollector","msg":"[♻️] Ejecutando recolector de basura..."}
+{"level":30,"time":1761085482713,"pid":3396,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 3396] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761085482714,"pid":3396,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 3396] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761085482715,"pid":3396,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 3396] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761085782716,"pid":3396,"hostname":"DESKTOP-DF2SECE","module":"GarbageCollector","msg":"[♻️] Ejecutando recolector de basura..."}
+{"level":30,"time":1761085838884,"pid":5648,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 5648] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761085838885,"pid":5648,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 5648] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761085838886,"pid":5648,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 5648] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761086138919,"pid":5648,"hostname":"DESKTOP-DF2SECE","module":"GarbageCollector","msg":"[♻️] Ejecutando recolector de basura..."}
+{"level":30,"time":1761086335523,"pid":8400,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 8400] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761086335524,"pid":8400,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 8400] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761086335525,"pid":8400,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 8400] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761086635526,"pid":8400,"hostname":"DESKTOP-DF2SECE","module":"GarbageCollector","msg":"[♻️] Ejecutando recolector de basura..."}
+{"level":30,"time":1761086849375,"pid":5676,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 5676] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761086849376,"pid":5676,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 5676] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761086849377,"pid":5676,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 5676] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761087149378,"pid":5676,"hostname":"DESKTOP-DF2SECE","module":"GarbageCollector","msg":"[♻️] Ejecutando recolector de basura..."}
+{"level":30,"time":1761087381872,"pid":13272,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 13272] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761087381873,"pid":13272,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 13272] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761087381874,"pid":13272,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 13272] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761087470730,"pid":12944,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 12944] main.js cargado, esperando órdenes..."}
+{"level":30,"time":1761087470731,"pid":12944,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 12944] Supervisor de sesión conectado (Modo Hijo)"}
+{"level":30,"time":1761087470732,"pid":12944,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 12944] Recibió orden para iniciar: 7223378630/593969533280"}
+{"level":30,"time":1761087770743,"pid":12944,"hostname":"DESKTOP-DF2SECE","module":"GarbageCollector","msg":"[♻️] Ejecutando recolector de basura..."}
