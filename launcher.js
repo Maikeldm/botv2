@@ -90,6 +90,25 @@ if (cluster.isPrimary) {
             launchWorkerForSession({ telegram_id, whatsapp_number });
         },
 
+        // =======================================================
+        //           ¡¡NUEVA FUNCIÓN DE INVALIDACIÓN!!
+        // =======================================================
+        /**
+         * Notifica al hijo que debe borrar el prefijo de un usuario de su caché.
+         * Llámala desde chocoplus.js cuando un usuario cambie su prefijo.
+         * @param {string} telegram_id 
+         */
+        invalidatePrefixCache: (telegram_id) => {
+            const worker = sessionWorkers.get(telegram_id);
+            if (worker) {
+                masterLogger.info(`[CACHE ♻️] Enviando invalidación de prefix cache al Hijo ${worker.process.pid} (TID: ${telegram_id})`);
+                worker.send({ type: 'INVALIDATE_PREFIX_CACHE', telegram_id: telegram_id });
+            } else {
+                masterLogger.warn(`[CACHE ♻️] Se pidió invalidar prefix para ${telegram_id}, pero no se encontró Hijo.`);
+            }
+        },
+        // =======================================================
+
         updateUserWhatsapp: usersDB.updateUserWhatsapp,
         clearUserWhatsapp: usersDB.clearUserWhatsapp
     });

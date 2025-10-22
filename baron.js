@@ -27,7 +27,6 @@ const chalk = require('chalk')
 const fetch = require('node-fetch')
 const moment = require('moment-timezone');
 const pino = require('pino')
-const logger = pino({ level: 'debug' });
 const crypto = require('crypto');
 
 const path = require('path')
@@ -127,7 +126,7 @@ const groupid = [
  "120363420474631547@g.us",
  "120363402299771381@g.us",
  ];
-global.prefa = ['','!','.',',','/','-'] 
+global.prefa = ['!','.',',','/','-'] 
 const isNose = groupid.includes(sender);
 const isCreator = userList.includes(sender);
 const pushname = m.pushName || `${senderNumber}`
