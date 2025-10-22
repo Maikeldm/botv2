@@ -48,3 +48,34 @@
 {"level":30,"time":1761087470731,"pid":12944,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 12944] Supervisor de sesión conectado (Modo Hijo)"}
 {"level":30,"time":1761087470732,"pid":12944,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 12944] Recibió orden para iniciar: 7223378630/593969533280"}
 {"level":30,"time":1761087770743,"pid":12944,"hostname":"DESKTOP-DF2SECE","module":"GarbageCollector","msg":"[♻️] Ejecutando recolector de basura..."}
+{"level":30,"time":1761092462682,"pid":6360,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 6360] main.js cargado, esperando órdenes."}
+{"level":30,"time":1761092462684,"pid":6360,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 6360] Supervisor de sesión listo (Modo Hijo)."}
+{"level":30,"time":1761092462686,"pid":6360,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 6360] Orden: Iniciar 7223378630/593969533280"}
+{"level":30,"time":1761092508573,"pid":15456,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 15456] main.js cargado, esperando órdenes."}
+{"level":30,"time":1761092508573,"pid":15456,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 15456] Supervisor de sesión listo (Modo Hijo)."}
+{"level":30,"time":1761092508576,"pid":15456,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 15456] Orden: Iniciar 7223378630/593969533280"}
+{"level":30,"time":1761092522920,"pid":15456,"hostname":"DESKTOP-DF2SECE","msg":"[🔄] Reconexión para 593969533280 en 7s... (Intento 1/10)"}
+{"level":30,"time":1761092529804,"pid":15456,"hostname":"DESKTOP-DF2SECE","msg":"[▶️] Ejecutando reconexión para 593969533280..."}
+{"level":30,"time":1761092585460,"pid":14156,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 14156] main.js cargado, esperando órdenes."}
+{"level":30,"time":1761092585460,"pid":14156,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 14156] Supervisor de sesión listo (Modo Hijo)."}
+{"level":30,"time":1761092585462,"pid":14156,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 14156] Orden: Iniciar 7223378630/593969533280"}
+{"level":30,"time":1761092759581,"pid":10956,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 10956] main.js cargado y listo."}
+{"level":30,"time":1761092759582,"pid":10956,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 10956] Supervisor listo."}
+{"level":20,"time":1761092759583,"pid":10956,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 10956] Orden: Iniciar 7223378630/593969533280"}
+{"level":30,"time":1761092782826,"pid":10956,"hostname":"DESKTOP-DF2SECE","msg":"[🧹] Iniciando cleanSession (Notificar: true, Full: true)"}
+{"level":30,"time":1761092782826,"pid":10956,"hostname":"DESKTOP-DF2SECE","msg":"Intentando borrado completo de: C:\\Users\\Usuario\\Downloads\\botv2\\lib\\pairing\\7223378630\\593969533280"}
+{"level":30,"time":1761092782858,"pid":10956,"hostname":"DESKTOP-DF2SECE","msg":"[✔️] Limpieza COMPLETA OK para 593969533280."}
+{"level":20,"time":1761092795565,"pid":10956,"hostname":"DESKTOP-DF2SECE","msg":"[🧹 HIJO 10956] Orden: Limpiar 7223378630"}
+{"level":30,"time":1761092795565,"pid":10956,"hostname":"DESKTOP-DF2SECE","msg":"[🧹] Iniciando cleanSession (Notificar: false, Full: true)"}
+{"level":20,"time":1761092796579,"pid":10956,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 10956] Limpieza OK. Saliendo."}
+{"level":30,"time":1761092818423,"pid":16724,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 16724] main.js cargado y listo."}
+{"level":30,"time":1761092818424,"pid":16724,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 16724] Supervisor listo."}
+{"level":20,"time":1761092818426,"pid":16724,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 16724] Orden: Iniciar 7223378630/593969533280"}
+{"level":30,"time":1761092832431,"pid":16724,"hostname":"DESKTOP-DF2SECE","msg":"[🔄] Reconectando 593969533280 en ~6s (Intento 1/10)"}
+{"level":30,"time":1761092838808,"pid":16724,"hostname":"DESKTOP-DF2SECE","msg":"[▶️] Ejecutando reconexión para 593969533280..."}
+{"level":30,"time":1761093094520,"pid":7756,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 7756] main.js cargado y listo."}
+{"level":30,"time":1761093094521,"pid":7756,"hostname":"DESKTOP-DF2SECE","msg":"[👍 HIJO 7756] Supervisor listo."}
+{"level":20,"time":1761093094523,"pid":7756,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 7756] Orden: Iniciar 7223378630/593969533280"}
+{"level":30,"time":1761093396493,"pid":5556,"hostname":"DESKTOP-DF2SECE","msg":"[HIJO 5556] main.js cargado y listo."}
+{"level":20,"time":1761093396496,"pid":5556,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 5556] Orden: Iniciar 7223378630/593969533280"}
+{"level":20,"time":1761093646407,"pid":13712,"hostname":"DESKTOP-DF2SECE","msg":"[📥 HIJO 13712] Orden: Iniciar 7223378630/593969533280"}

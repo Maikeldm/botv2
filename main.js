@@ -1,6 +1,4 @@
-// main.js (CORREGIDO - Anti-Saturación y Prefijos Individuales)
-
-// --- Dependencias ---
+// --- Dependencias principales ---
 const fs = require('fs');
 const path = require('path');
 const pino = require('pino');
@@ -15,395 +13,348 @@ const {
 } = require('baron-baileys-v2');
 const usersDB = require('./lib/users.js');
 const dotenv = require('dotenv');
-const { getPrefix } = require('./lib/prefixHandler.js'); // <-- USA ESTA FUNCIÓN
-const TaskQueue = require('./lib/taskQueue.js');
-const TtlCache = require('./lib/ttlCache.js');
-
+// =======================================================
+//        ¡CORRECCIÓN! USAMOS TU prefixHandler
+// =======================================================
+const { getPrefix } = require('./lib/prefixHandler.js'); // <--- ¡USAMOS ESTE!
 dotenv.config();
 
-// --- Loggers ---
-const logDir = path.join(__dirname, 'logs');
-if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-const baseLogger = pino({ level: 'info' }, pino.destination(path.join(logDir, 'children.log')));
+// =======================================================
+//        ¡BORRADO! No más prefijos de config.js
+// =======================================================
+// const globalPrefixes = require('./config.js').prefa || ['!', '.', '?']; // <-- ¡ELIMINADO!
 
-// --- Manejadores Globales ---
-let sessionLogger = baseLogger;
-process.on('uncaughtException', (err, origin) => {
-    sessionLogger.fatal(err, `[HIJO ${process.pid}] UNCAUGHT EXCEPTION. Origin: ${origin}`);
-});
-process.on('unhandledRejection', (reason, promise) => {
-    sessionLogger.error({ reason, promise }, `[HIJO ${process.pid}] UNHANDLED REJECTION.`);
-});
-process.setMaxListeners(0);
 
-// --- Manejador de Órdenes del Maestro ---
+// --- Manejador de Órdenes del Proceso Maestro ---
 process.on('message', (message) => {
     if (message.type === 'START_SESSION') {
-        baseLogger.info(`[📥 HIJO ${process.pid}] Orden: Iniciar ${message.telegram_id}/${message.whatsapp_number}`);
+        console.log(`[📥 HIJO ${process.pid}] Recibió orden para iniciar: ${message.telegram_id}/${message.whatsapp_number}`);
         startSession(message.telegram_id, message.whatsapp_number);
     }
     if (message.type === 'CLEAN_SESSION') {
-        baseLogger.info(`[🧹 HIJO ${process.pid}] Orden: Limpiar ${message.telegram_id}`);
+        console.log(`[🧹 HIJO ${process.pid}] Recibió orden de limpieza para: ${message.telegram_id}`);
         cleanSession(message.telegram_id, message.notifyUser, message.fullClean);
-        setTimeout(() => { baseLogger.info(`[HIJO ${process.pid}] Limpieza OK. Saliendo.`); process.exit(0); }, 1000);
-    }
-    if (message.type === 'INVALIDATE_PREFIX_CACHE') {
-        const telegram_id = message.telegram_id;
-        const waNumber = telegramIdToWaNumberMap.get(telegram_id);
-        if (waNumber) {
-            const invalidated = prefixCache.invalidate(waNumber);
-            sessionLogger.info(`[CACHE ♻️] Invalidación OK para ${waNumber} (TID: ${telegram_id}). Borrado: ${invalidated}`);
-        } else {
-            sessionLogger.warn(`[CACHE ♻️] Invalidación FALLIDA para TID: ${telegram_id} (WA no encontrado)`);
-        }
     }
 });
 
-// --- Variables Globales del Hijo ---
-const sessions = new Map();
+// --- Variables Globales (SOLO DE ESTE HIJO) ---
+const activeSessions = {};
+const sessions = new Map(); // Ahora guardará { conn, intervalId }
 const retryCounters = new Map();
 const maxRetries = 10;
-const prefixCache = new TtlCache(3600); // Cache de 1 hora
-const telegramIdToWaNumberMap = new Map(); // Mapa inverso para invalidación
 
-baseLogger.info(`[HIJO ${process.pid}] main.js cargado, esperando órdenes.`);
+console.log(`[HIJO ${process.pid}] main.js cargado, esperando órdenes...`);
 
-// --- Función de Reconexión ---
+
+// --- NUEVA FUNCIÓN DE RECONEXIÓN ---
 function reconnectSession(telegram_id, number) {
     const sessionId = `${telegram_id}-${number}`;
-    const logger = sessions.get(sessionId)?.logger || baseLogger;
     const currentAttempt = (retryCounters.get(sessionId) || 0) + 1;
 
     if (currentAttempt > maxRetries) {
-        logger.error(`[❌] Límite reintentos (${maxRetries}) para ${number}. Limpiando.`);
-        cleanSession(telegram_id, true, true); // Notificar y limpiar completo
+        console.log(`[❌ HIJO ${process.pid}] Límite de reintentos para ${number}. Limpiando.`);
+        cleanSession(telegram_id, true, true); 
         return;
     }
 
     retryCounters.set(sessionId, currentAttempt);
-    // Backoff Exponencial: 2^1*3=6s, 2^2*3=12s, 2^3*3=24s...
     const delay = Math.pow(2, currentAttempt) * 3000 + Math.random() * 1000;
-    logger.info(`[🔄] Reconexión para ${number} en ${Math.round(delay / 1000)}s... (Intento ${currentAttempt}/${maxRetries})`);
-
+    console.log(`[🔄 HIJO ${process.pid}] Reconexión para ${number} en ${Math.round(delay / 1000)}s... (Intento ${currentAttempt}/${maxRetries})`);
+    
     setTimeout(() => {
-        logger.info(`[▶️] Ejecutando reconexión para ${number}...`);
-        startSession(telegram_id, number); // Reintentar iniciar
+        console.log(`[▶️ HIJO ${process.pid}] Ejecutando reconexión para ${number}...`);
+        startSession(telegram_id, number);
     }, delay);
 }
 
-// --- Función Principal: Iniciar Sesión ---
+
+/**
+ * Inicia o reanuda una sesión de WhatsApp.
+ */
 async function startSession(telegram_id, number) {
     const sessionId = `${telegram_id}-${number}`;
     const sessionPath = path.join(__dirname, 'lib', 'pairing', String(telegram_id), number);
 
-    // --- Logger por Sesión ---
-    const sessionLogPath = path.join(logDir, String(telegram_id));
-    if (!fs.existsSync(sessionLogPath)) fs.mkdirSync(sessionLogPath, { recursive: true });
-    const sessionLogStream = pino.destination(path.join(sessionLogPath, `${number}.log`));
-    sessionLogger = pino({ level: 'info' }, sessionLogStream).child({ session: sessionId, pid: process.pid });
-
-    sessionLogger.info('Iniciando startSession...');
     if (sessions.has(sessionId)) {
-        sessionLogger.warn(`Sesión duplicada ${number}. Detenido.`);
+        console.log(`[⚠️ HIJO ${process.pid}] Intento de iniciar sesión duplicada: ${number}. Detenido.`);
         return;
     }
 
-    // --- Autenticación y Store ---
     const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-    const store = makeInMemoryStore({ logger: sessionLogger.child({ module: 'store' }) });
+    const store = makeInMemoryStore({
+        logger: pino().child({ level: 'silent', stream: 'store' })
+    });
 
-    // --- Conexión Baileys ---
-    const conn = simple({ // 'simple' es tu wrapper 'lib/oke.js'
-        logger: sessionLogger.child({ module: 'baileys' }),
-        printQRInTerminal: false, // El maestro se encarga
+    const conn = simple({
+        logger: pino({ level: 'silent' }),
+        printQRInTerminal: false,
         auth: state,
-        browser: Browsers.windows("Chrome"), // Tu config
-        version: [2, 3000, 1025190524], // Tu versión específica
-        connectTimeoutMs: 60000, // Timeout más largo
+        browser: Browsers.windows("Chrome"),
+        version: [2, 3000, 1025190524],
+        connectTimeoutMs: 30000,
         getMessage: async key => (store.loadMessage(key.remoteJid, key.id) || {}).message || proto.Message.fromObject({})
     });
-    store.bind(conn.ev); // Sincronizar store con eventos
+    
+    store.bind(conn.ev);
 
-    sessionLogger.info('Cache de prefijos (TTL 1h) ACTIVO.');
-
-    // --- Ping Inteligente ---
-    const pingState = { failures: 0, maxFailures: 5, intervalId: null };
-    const smartPing = async () => {
-        const sessionData = sessions.get(sessionId);
-        if (!sessionData) { clearInterval(pingState.intervalId); return; }
-        // Esperar a que conn.user esté definido después de la conexión inicial
-        if (!sessionData.conn?.user?.id) { sessionLogger.warn('Ping saltado (conn.user no listo).'); return; }
-
-        try {
-            await sessionData.conn.isOnWhatsApp(sessionData.conn.user.id);
-            // sessionLogger.info('Ping (isOnWhatsApp) OK'); // Log opcional (puede ser ruidoso)
-            pingState.failures = 0;
-        } catch (e1) {
-            sessionLogger.warn(e1, 'Ping (isOnWhatsApp) falló. Intentando fetchBlocklist...');
+    // =======================================================
+    //           FIX 1: PING ANTI-DESCONEXIÓN (Nivel 2)
+    // =======================================================
+    const keepAliveInterval = setInterval(() => {
+        if (sessions.has(sessionId)) {
             try {
-                await sessionData.conn.fetchBlocklist();
-                // sessionLogger.info('Ping (fetchBlocklist) OK'); // Log opcional
-                pingState.failures = 0;
-            } catch (e2) {
-                sessionLogger.error(e2, 'Ping (fetchBlocklist) también falló.');
-                pingState.failures++;
-                if (pingState.failures >= pingState.maxFailures) {
-                    sessionLogger.error(`Ping falló ${pingState.failures} veces seguidas. Forzando reconexión.`);
-                    clearInterval(pingState.intervalId);
-                    reconnectSession(telegram_id, number); // Iniciar proceso de reconexión
-                }
+                conn.fetchBlocklist();
+            } catch (e) {
+                console.error(`[HIJO ${process.pid}] Error en Ping de vida para ${number}:`, e.message);
             }
+        } else {
+            clearInterval(keepAliveInterval); 
         }
-    };
-    pingState.intervalId = setInterval(smartPing, 30 * 1000); // Cada 30 segundos
+    }, 45 * 1000); // 45 Segundos
 
-    // --- Cola de Tareas (Worker Threads) ---
-    const taskQueue = new TaskQueue(conn, sessionLogger.child({ module: 'TaskQueue' }));
-    sessionLogger.info(`Cola de tareas iniciada (${taskQueue.MAX_WORKERS} hilos).`);
+    sessions.set(sessionId, { conn, intervalId: keepAliveInterval });
 
-    // --- Guardar Estado de Sesión ---
-    sessions.set(sessionId, { conn, intervalId: pingState.intervalId, taskQueue, logger: sessionLogger });
 
-    // --- Lógica de Pairing (Si es nueva sesión) ---
+    // Lógica de Pairing (se queda igual)
     if (!conn.authState.creds.registered) {
-        sessionLogger.info('Sesión no registrada. Solicitando código...');
-        setTimeout(async () => { // Dar tiempo a Baileys para inicializar
-            if (!sessions.has(sessionId)) return; // Si la sesión murió mientras tanto
+        setTimeout(async () => {
+            if (!sessions.has(sessionId)) return; 
             try {
                 let code = await conn.requestPairingCode(number);
-                code = code?.match(/.{1,4}/g)?.join("-") || code; // Formatear código
+                code = code?.match(/.{1,4}/g)?.join("-") || code;
                 if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
-                fs.writeFileSync(path.join(sessionPath, 'pairing.json'), JSON.stringify({ code })); // Guardar para Telegram
-                sessionLogger.info(`[✓] Código generado para ${number}: ${code}`);
-                // Aquí NO actualizamos DB, esperamos a que el usuario confirme en Telegram
+                fs.writeFileSync(path.join(sessionPath, 'pairing.json'), JSON.stringify({ code }));
+                console.log(`[✓ HIJO ${process.pid}] Código generado para ${number}: ${code}`);
             } catch (e) {
-                sessionLogger.error(e, `[!] Error crítico generando código para ${number}. Limpiando...`);
-                await cleanSession(telegram_id, false, true); // Limpiar sesión fallida
+                console.error(`[!] HIJO ${process.pid}] Error código para ${number}:`, e.message);
+                if (sessions.has(sessionId)) { 
+                   await cleanSession(telegram_id, false, true);
+                }
             }
-        }, 5000); // Aumentar espera a 5s
+        }, 3000);
     }
 
-    // --- Manejador Central de Conexión ---
+    // --- Manejador de Conexión Definitivo ---
     conn.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
-        const logger = sessions.get(sessionId)?.logger || sessionLogger; // Usar logger específico si existe
-
+        
         if (connection === 'open') {
-            logger.info(`[✅] Conexión ESTABLECIDA para ${number}.`);
-            retryCounters.set(sessionId, 0); // Resetear reintentos en éxito
-            // Aquí podrías notificar a Telegram si quieres
-        } else if (connection === 'close') {
-            const sessionData = sessions.get(sessionId);
-            if (sessionData) {
-                clearInterval(sessionData.intervalId); // Detener ping
-                sessionData.taskQueue.destroy(); // Detener hilos
-                logger.info('Ping y TaskQueue detenidos por cierre.');
-            }
-            sessions.delete(sessionId); // Eliminar de sesiones activas
-
-            const statusCode = lastDisconnect?.error?.output?.statusCode;
-            const reason = DisconnectReason[statusCode] || `Desconocido (${statusCode})`;
-            logger.warn({ statusCode, reason, error: lastDisconnect?.error }, 'Conexión CERRADA.');
-
-            const unrecoverableCodes = [
-                DisconnectReason.loggedOut,           // Cerró sesión desde el móvil
-                DisconnectReason.connectionReplaced,  // Abrió WA Web en otro lado
-                DisconnectReason.badSession           // Archivos de sesión corruptos
-            ];
-
-            if (unrecoverableCodes.includes(statusCode)) {
-                logger.error(`[🚫] Cierre IRRECUPERABLE para ${number}. Razón: ${reason}. Limpiando TODO.`);
-                await cleanSession(telegram_id, true, true); // Notificar y limpieza completa
-            } else if (statusCode === DisconnectReason.timedOut) {
-                logger.warn(`[⏳] Timeout detectado. Reintentando conexión...`);
-                reconnectSession(telegram_id, number);
-            } else if (statusCode === DisconnectReason.rateOverlimit) {
-                 logger.warn(`[⏳] Rate limit por WhatsApp. Esperando 5 minutos...`);
-                 setTimeout(() => reconnectSession(telegram_id, number), 5 * 60 * 1000);
-            } else {
-                // Otras razones (problemas de red, reinicio del servidor WA, etc.)
-                logger.info(`[🔌] Conexión perdida (${reason}). Iniciando reconexión...`);
-                reconnectSession(telegram_id, number);
-            }
-        }
-    });
-
-    // --- Guardado de Credenciales ---
-    conn.ev.on('creds.update', saveCreds);
-
-    // --- Manejador de Mensajes ---
-    conn.ev.on('messages.upsert', async (chatUpdate) => {
-        const mek = chatUpdate.messages[0];
-        // Ignorar notificaciones de estado, mensajes sin contenido, etc.
-        if (!mek.message || mek.key.remoteJid === 'status@broadcast' || mek.key.fromMe) return;
-
-        // Determinar remitente (grupo vs privado)
-        const senderId = mek.key.remoteJid.endsWith('@g.us') ? mek.key.participant : mek.key.remoteJid;
-        if (!senderId) return; // No se pudo identificar al remitente
-
-        // Extraer texto del mensaje
-        const body = mek.message?.conversation ||
-                     mek.message?.extendedTextMessage?.text ||
-                     mek.message?.imageMessage?.caption ||
-                     mek.message?.videoMessage?.caption || "";
-
-        if (!body) return; // Ignorar mensajes sin texto (stickers, audios sin caption, etc.)
-
-        // =======================================================
-        //           FILTRO ANTI-SATURACIÓN (CORREGIDO)
-        // =======================================================
-        const senderKey = senderId.split('@')[0]; // Usar número sin @s.whatsapp.net como clave
-        let effectivePrefix = prefixCache.get(senderKey); // 1. Intentar obtener desde cache
-
-        if (effectivePrefix === null) { // Cache miss o expirado
-            // sessionLogger.debug(`Cache MISS para ${senderKey}. Consultando DB...`); // Log opcional
-            try {
-                // 2. Consultar DB (operación más lenta)
-                const user = await usersDB.findUserByWhatsapp(senderKey);
-                // Usar la función getPrefix de prefixHandler.js
-                effectivePrefix = user ? getPrefix(user.telegram_id) : null; // Devuelve prefijo o null si no hay
-
-                // 3. Poblar mapa inverso para invalidación de caché
-                if (user && user.telegram_id) {
-                    telegramIdToWaNumberMap.set(user.telegram_id, senderKey);
-                }
-
-                // 4. Guardar en caché (incluso si es null) para evitar consultas repetidas
-                prefixCache.set(senderKey, effectivePrefix);
-
-            } catch (dbError) {
-                sessionLogger.error(dbError, `Error DB consultando prefijo para ${senderKey}`);
-                effectivePrefix = null; // Asumir null en caso de error
-            }
-        }
-        // else { sessionLogger.debug(`Cache HIT para ${senderKey}: '${effectivePrefix}'`); } // Log opcional
-
-        let prefix = null;
-        let isCmd = false;
-
-        // 5. Lógica de Detección de Comando (Anti-Saturación)
-        if (effectivePrefix === '') { // Prefijo vacío ('')
-             // ACEPTAR SOLO EN CHAT PRIVADO
-             if (!mek.key.remoteJid.endsWith('@g.us')) {
-                 isCmd = true;
-                 prefix = ''; // Indicar que es comando sin prefijo
-             }
-             // Si es grupo, se ignora (isCmd sigue false)
-
-        } else if (effectivePrefix && body.startsWith(effectivePrefix)) { // Prefijo normal (ej: '!')
-            isCmd = true;
-            prefix = effectivePrefix;
-        }
-        // Si effectivePrefix es null o no coincide, isCmd sigue false
-
-        // 6. Salida Rápida si no es comando
-        if (!isCmd) {
-            return; // <<-- ¡¡OPTIMIZACIÓN CLAVE!! Ignora mensajes normales
-        }
-        // =======================================================
-        //           FIN DEL FILTRO ANTI-SATURACIÓN
-        // =======================================================
-
-        // Si llegó hasta aquí, ¡ES UN COMANDO VÁLIDO!
-        const m = smsg(conn, mek, store); // Procesar mensaje con tu helper smsg
-
-        const sessionData = sessions.get(sessionId);
-        if (!sessionData) {
-            sessionLogger.warn('Comando recibido pero sesión no encontrada en `sessions`. Ignorando.');
+            console.log(`[✅ HIJO ${process.pid}] Conexión estabilizada para ${number}.`);
+            retryCounters.set(sessionId, 0);
+            activeSessions[telegram_id] = conn;
             return;
         }
 
-        // Crear versión 'lite' de 'm' para pasar al worker (evita DataCloneError)
-        const m_lite = {
-            key: m.key, chat: m.chat, sender: m.sender, isGroup: m.isGroup,
-            message: m.message, // Proto es serializable
-            pushName: m.pushName, text: m.text
-        };
-        sessionData.taskQueue.updateContext(m_lite); // Actualizar contexto de la cola
+        if (connection === 'close') {
+            const sessionData = sessions.get(sessionId);
+            if (sessionData) {
+                clearInterval(sessionData.intervalId); 
+            }
+            
+            sessions.delete(sessionId);
+            if (activeSessions[telegram_id]) delete activeSessions[telegram_id];
+            
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const reason = DisconnectReason[statusCode] || 'Razón desconocida';
 
-        // Llamar a baron.js (enrutador de comandos)
-        require("./baron.js")(
-            conn,
-            m, // baron.js recibe el 'm' completo (con funciones)
-            chatUpdate,
-            store,
-            prefix, // Pasar el prefijo detectado
-            sessionData.taskQueue, // Pasar la cola de tareas
-            sessionLogger.child({ module: 'baron' }) // Pasar logger específico
-        );
-    }); // Fin messages.upsert
+            const unrecoverableStatusCodes = [
+                DisconnectReason.loggedOut,
+                DisconnectReason.connectionReplaced,
+                DisconnectReason.badSession
+            ];
 
-    return conn; // Devuelve la conexión creada
-} // Fin startSession
+            if (unrecoverableStatusCodes.includes(statusCode)) {
+                console.log(`[🚫 HIJO ${process.pid}] Cierre definitivo para ${number}. Razón: ${reason}. Limpiando...`);
+                await cleanSession(telegram_id, true, true);
+            } else {
+                console.log(`[🔌 HIJO ${process.pid}] Conexión cerrada para ${number}. Razón: ${reason}.`);
+                reconnectSession(telegram_id, number);
+            }
+        }
+    });
 
-// --- Función de Limpieza de Sesión ---
+    conn.ev.on('creds.update', saveCreds);
+
+
+    // =======================================================
+    //     ¡¡¡FILTRO INTELIGENTE CORREGIDO!!! (Usa prefixes.json)
+    // =======================================================
+    conn.ev.on('messages.upsert', async chatUpdate => {
+        const mek = chatUpdate.messages[0];
+        if (!mek.message || mek.key.remoteJid === 'status@broadcast') return;
+        
+        const senderId = mek.key.remoteJid.endsWith('@g.us') ? mek.key.participant : mek.key.remoteJid;
+
+        if (!senderId) {
+            return; // Ignora mensajes de sistema sin remitente
+        }
+        
+        // Obtenemos el texto del mensaje
+        const body = mek.message?.conversation || 
+                     mek.message?.extendedTextMessage?.text || 
+                     mek.message?.imageMessage?.caption || 
+                     mek.message?.videoMessage?.caption || 
+                     "";
+
+        // --- ¡FILTRO SIMPLE Y CORRECTO! ---
+        let prefix = null;
+        let isCmd = false;
+
+        // 1. Buscar al usuario asociado a este número de WhatsApp
+        //    (Necesitamos el telegram_id para obtener su prefijo)
+        const user = await usersDB.findUserByWhatsapp(senderId.split('@')[0]);
+        
+        // 2. Obtener el prefijo CORRECTO para este usuario (o el default si no existe)
+        //    ¡Usamos la función de prefixHandler.js!
+        const effectivePrefix = user ? getPrefix(user.telegram_id) : getPrefix(null); // Pasamos null si no hay user para obtener el default
+
+        // 3. Comprobar SI Y SOLO SI el mensaje empieza con ESE prefijo
+        //    (getPrefix podría devolver '', así que comprobamos longitud)
+        if (effectivePrefix && body.startsWith(effectivePrefix)) {
+             isCmd = true;
+             prefix = effectivePrefix;
+        } else if (effectivePrefix === '' && body.length > 0) {
+             // Caso especial: si el prefijo es '', cualquier cosa es comando (menos mensajes vacíos)
+             // ¡OJO! Esto podría ser peligroso si no se maneja bien en baron.js
+             // Considera si realmente quieres soportar prefijo vacío.
+             // Por seguridad, lo comentamos. Si lo quieres, descomenta las 2 líneas de abajo.
+             // isCmd = true;
+             // prefix = '';
+        }
+
+        // 4. ¡EL GRAN FILTRO!
+        // Si no es un comando con el prefijo correcto, lo ignoramos.
+        if (!isCmd) {
+            return;
+        }
+        // --- FIN DEL FILTRO CORREGIDO ---
+        
+        // Solo si ES un comando, hacemos el trabajo pesado:
+        const m = smsg(conn, mek, store);
+        
+        // ¡Pasamos el prefijo CORRECTO (el del usuario o el default)!
+        require("./baron.js")(conn, m, chatUpdate, store, prefix);
+    });
+
+    return conn;
+}
+
+
 async function cleanSession(telegram_id, notifyUser = false, fullClean = false) {
-    const user = await usersDB.getUser(telegram_id); // Obtener user para sacar WA number
+    const user = await usersDB.getUser(telegram_id);
     const whatsappNumber = user?.whatsapp_number;
     const sessionId = `${telegram_id}-${whatsappNumber}`;
-    const logger = sessions.get(sessionId)?.logger || baseLogger; // Logger específico o base
 
-    logger.info(`[🧹] Iniciando cleanSession (Notificar: ${notifyUser}, Full: ${fullClean})`);
+    if (activeSessions[telegram_id]) delete activeSessions[telegram_id];
 
-    // 1. Detener procesos activos de la sesión
     const sessionData = sessions.get(sessionId);
     if (sessionData) {
         try {
-            clearInterval(sessionData.intervalId); // Detener ping
-            sessionData.taskQueue.destroy(); // Detener hilos de trabajo
-            // Intentar cerrar conexión Baileys limpiamente
-            sessionData.conn.end(new Error('Sesión limpiada manualmente.'));
-            logger.info('Ping, TaskQueue y Conexión detenidos.');
-        } catch (e) {
-            logger.warn(e, 'Error menor durante el cierre forzado de conexión.');
-        }
-        sessions.delete(sessionId); // Quitar de sesiones activas
+            clearInterval(sessionData.intervalId); // Paramos el ping
+            sessionData.conn.end(new Error('Sesión limpiada por el Maestro'));
+        } catch (e) { /* No importa si falla */ }
+        sessions.delete(sessionId);
     }
-
-    // 2. Limpiar caché y mapa inverso
-    if (telegramIdToWaNumberMap.has(telegram_id)) {
-        const waNum = telegramIdToWaNumberMap.get(telegram_id);
-        prefixCache.invalidate(waNum); // Borrar prefijo del cache
-        telegramIdToWaNumberMap.delete(telegram_id); // Borrar mapeo inverso
-        logger.info(`[CACHE ♻️] Cache y mapa inverso limpios para ${waNum} (TID: ${telegram_id})`);
-    }
-
-    // 3. Limpiar contador de reintentos
+    
     if (retryCounters.has(sessionId)) retryCounters.delete(sessionId);
 
-    // 4. Limpieza Profunda (Borrar archivos y DB) si fullClean es true
     if (whatsappNumber && fullClean) {
         const sessionPath = path.join(__dirname, 'lib', 'pairing', String(telegram_id), whatsappNumber);
-        logger.info(`Intentando borrado completo de: ${sessionPath}`);
         if (fs.existsSync(sessionPath)) {
             try {
-                fs.rmSync(sessionPath, { recursive: true, force: true }); // Borrar carpeta de sesión
-                await usersDB.clearUserWhatsapp(telegram_id); // Borrar número de la DB
-                logger.info(`[✔️] Limpieza COMPLETA de ${whatsappNumber} finalizada (Archivos y DB).`);
-                // Aquí podrías notificar a Telegram si 'notifyUser' es true
+                fs.rmSync(sessionPath, { recursive: true, force: true });
+                await usersDB.clearUserWhatsapp(telegram_id);
+                console.log(`[🧹 HIJO ${process.pid}] Limpieza completa para ${whatsappNumber}.`);
             } catch (error) {
-                logger.error(error, `[❌] Error durante la limpieza COMPLETA de ${whatsappNumber}`);
+                console.error(`[❌ HIJO ${process.pid}] Error en limpieza completa:`, error.message);
             }
-        } else {
-             logger.warn(`La carpeta ${sessionPath} no existía para borrado completo.`);
-             // Igualmente intentar limpiar DB por si acaso
-             try { await usersDB.clearUserWhatsapp(telegram_id); } catch(e){}
         }
-    } else if (whatsappNumber && !fullClean) {
-         logger.info(`Limpieza superficial para ${whatsappNumber}. Archivos y DB conservados.`);
     }
-
-    return true; // Indicar que la limpieza (o intento) se completó
+    
+    return true;
 }
 
-// --- Recolector de Basura (Opcional, tu lógica) ---
-const garbageLogger = baseLogger.child({ module: 'GarbageCollector' });
+
+/**
+ * Recolector de basura inteligente para archivos de sesión.
+ */
 async function periodicSessionGarbageCollector() {
-    garbageLogger.info(`[♻️] Ejecutando recolector de basura... (Tu lógica aquí)`);
-    // Aquí iría tu lógica para limpiar sesiones zombie o inactivas si la tienes
-}
-// Descomentar si tienes lógica de garbage collector:
-// setInterval(periodicSessionGarbageCollector, 3 * 60 * 60 * 1000); // Cada 3 horas
-// setTimeout(periodicSessionGarbageCollector, 5 * 60 * 1000); // Ejecutar una vez al inicio
+    console.log(`[♻️ HIJO ${process.pid}] Ejecutando recolector de basura...`);
+    const pairingDir = path.join(__dirname, 'lib', 'pairing');
+    if (!fs.existsSync(pairingDir)) return;
 
-baseLogger.info(`[👍 HIJO ${process.pid}] Supervisor de sesión listo (Modo Hijo).`);
+    const userDirs = fs.readdirSync(pairingDir);
+    const now = Date.now();
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+    const PRE_KEY_POOL_SIZE = 30;
+
+    for (const userDir of userDirs) {
+        const numberDirsPath = path.join(pairingDir, userDir);
+        if (!fs.lstatSync(numberDirsPath).isDirectory()) continue;
+
+        const numberDirs = fs.readdirSync(numberDirsPath);
+        for (const numberDir of numberDirs) {
+            const sessionPath = path.join(numberDirsPath, numberDir);
+            if (!fs.lstatSync(sessionPath).isDirectory()) continue;
+
+            try {
+                const files = fs.readdirSync(sessionPath);
+                let stats = { preKeys: 0, tempFiles: 0, errors: 0 };
+
+                // --- Gestión de pre-keys ---
+                const preKeyFiles = files
+                    .filter(f => f.startsWith('pre-key-'))
+                    .map(f => ({
+                        name: f,
+                        num: parseInt(f.match(/pre-key-(\d+)/)?.[1] || '0'),
+                        path: path.join(sessionPath, f)
+                    }))
+                    .sort((a, b) => b.num - a.num);
+
+                if (preKeyFiles.length > PRE_KEY_POOL_SIZE) {
+                    const toDelete = preKeyFiles.slice(PRE_KEY_POOL_SIZE);
+                    for (const file of toDelete) {
+                        try { fs.unlinkSync(file.path); stats.preKeys++; } 
+                        catch (e) { stats.errors++; }
+                    }
+                }
+
+                // --- Limpieza de archivos temporales ---
+                for (const file of files) {
+                    if (file === 'creds.json' || file === 'pairing.json') continue;
+                    const isTempFile = [
+                        'sender-key-', 'app-state-sync-key-', 'app-state-sync-version-', 'session-'
+                    ].some(prefix => file.startsWith(prefix));
+
+                    if (isTempFile) {
+                        const filePath = path.join(sessionPath, file);
+                        try {
+                            const stat = fs.statSync(filePath);
+                            if (now - stat.mtimeMs > TWENTY_FOUR_HOURS) {
+                                fs.unlinkSync(filePath);
+                                stats.tempFiles++;
+                            }
+                        } catch (e) { stats.errors++; continue; }
+                    }
+                }
+                
+                if (stats.preKeys > 0 || stats.tempFiles > 0) {
+                     console.log(`[♻️ HIJO ${process.pid}] Sesión ${numberDir}: ${stats.preKeys} pre-keys y ${stats.tempFiles} temps eliminados.`);
+                }
+
+            } catch (e) {
+                console.error(`[❌ HIJO ${process.pid}] Error en sesión ${sessionPath}:`, e.message);
+            }
+        }
+    }
+}
+
+// --- Programar recolector de basura (cada hijo tendrá el suyo) ---
+setInterval(periodicSessionGarbageCollector, 3 * 60 * 60 * 1000);
+setTimeout(periodicSessionGarbageCollector, 5 * 60 * 1000); // Uno al inicio
+
+// --- Mensaje final de inicio ---
+console.log(`[👍 HIJO ${process.pid}] Telegram x Baileys conectado com sucesso (Modo Hijo)`);
+
+// --- Exportar funciones clave ---
+module.exports = { startSession, cleanSession, activeSessions };

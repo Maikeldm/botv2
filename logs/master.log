@@ -506,3 +506,163 @@
 {"level":30,"time":1761087768411,"pid":7520,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
 {"level":30,"time":1761087768950,"pid":7520,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":12944,"cpu":"12.29%","mem":"236.62 MB","msg":"Stats del Worker"}
 {"level":30,"time":1761087768950,"pid":7520,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761092460947,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[🚀 MAESTRO] Proceso Primario 2816 activado."}
+{"level":30,"time":1761092460948,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[🔥] Modo: Aislamiento Total (1 Sesión = 1 Proceso)."}
+{"level":30,"time":1761092460948,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[🤖 MAESTRO] Iniciando Jefe de Telegram..."}
+{"level":30,"time":1761092460955,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] Cargando sesiones existentes desde la DB..."}
+{"level":30,"time":1761092460956,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] 1 sesiones encontradas. Lanzando 1 Hijos..."}
+{"level":30,"time":1761092460956,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[LAUNCH] Creando nuevo Hijo para 7223378630..."}
+{"level":30,"time":1761092460969,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"Enviando tarea 7223378630 al nuevo Hijo 6360"}
+{"level":30,"time":1761092461485,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] ¡Todas las sesiones existentes han sido asignadas a sus Hijos!"}
+{"level":30,"time":1761092506934,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[▶️ MAESTRO] Orden de inicio para 7223378630/593969533280"}
+{"level":40,"time":1761092506934,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] 7223378630 ya tiene un Hijo. Matando al antiguo..."}
+{"level":30,"time":1761092506935,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[LAUNCH] Creando nuevo Hijo para 7223378630..."}
+{"level":30,"time":1761092506947,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"Enviando tarea 7223378630 al nuevo Hijo 15456"}
+{"level":50,"time":1761092506969,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[❌ MAESTRO] Hijo 6360 murió inesperadamente (Señal: SIGTERM, Código: null). No estaba en el mapa."}
+{"level":30,"time":1761092520971,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761092520971,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761092521927,"pid":2816,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":15456,"cpu":"0.00%","mem":"190.22 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761092521927,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761092580975,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761092580975,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761092581436,"pid":2816,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":15456,"cpu":"6.46%","mem":"230.11 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761092581436,"pid":2816,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761092583964,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"[🚀 MAESTRO] Proceso Primario 14564 activado."}
+{"level":30,"time":1761092583965,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"[🔥] Modo: Aislamiento Total (1 Sesión = 1 Proceso)."}
+{"level":30,"time":1761092583965,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"[🤖 MAESTRO] Iniciando Jefe de Telegram..."}
+{"level":30,"time":1761092583977,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] Cargando sesiones existentes desde la DB..."}
+{"level":30,"time":1761092583978,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] 1 sesiones encontradas. Lanzando 1 Hijos..."}
+{"level":30,"time":1761092583978,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"[LAUNCH] Creando nuevo Hijo para 7223378630..."}
+{"level":30,"time":1761092584015,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"Enviando tarea 7223378630 al nuevo Hijo 14156"}
+{"level":30,"time":1761092584527,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] ¡Todas las sesiones existentes han sido asignadas a sus Hijos!"}
+{"level":30,"time":1761092643981,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761092643982,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761092644801,"pid":14564,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":14156,"cpu":"0.00%","mem":"158.33 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761092644801,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761092703992,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761092703992,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761092704432,"pid":14564,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":14156,"cpu":"0.37%","mem":"159.57 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761092704432,"pid":14564,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761092758057,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[🚀 MAESTRO] Proceso Primario 6368 activado."}
+{"level":30,"time":1761092758059,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[🔥] Modo: Aislamiento Total (1 Sesión = 1 Proceso)."}
+{"level":30,"time":1761092758059,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[🤖 MAESTRO] Iniciando Jefe de Telegram..."}
+{"level":30,"time":1761092758070,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] Cargando sesiones existentes desde la DB..."}
+{"level":30,"time":1761092758071,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] 1 sesiones encontradas. Lanzando 1 Hijos..."}
+{"level":30,"time":1761092758071,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[LAUNCH] Creando nuevo Hijo para 7223378630..."}
+{"level":30,"time":1761092758090,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"Enviando tarea 7223378630 al nuevo Hijo 10956"}
+{"level":30,"time":1761092758594,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] ¡Todas las sesiones existentes han sido asignadas a sus Hijos!"}
+{"level":30,"time":1761092795565,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[🧹 MAESTRO] Orden de limpieza para 7223378630 (Full: true)"}
+{"level":30,"time":1761092795565,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"Enviando orden de limpieza (Full: true) al Hijo 10956..."}
+{"level":30,"time":1761092796612,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"Hijo 10956 (Sesión 7223378630) ha terminado (Code: 0, Signal: null)."}
+{"level":50,"time":1761092796612,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[❌ MAESTRO] Hijo 10956 murió inesperadamente (Señal: null, Código: 0). No estaba en el mapa."}
+{"level":30,"time":1761092816958,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[▶️ MAESTRO] Orden de inicio para 7223378630/593969533280"}
+{"level":30,"time":1761092816958,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[LAUNCH] Creando nuevo Hijo para 7223378630..."}
+{"level":30,"time":1761092816970,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"Enviando tarea 7223378630 al nuevo Hijo 16724"}
+{"level":30,"time":1761092818073,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761092818074,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761092819086,"pid":6368,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":16724,"cpu":"81.30%","mem":"175.54 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761092819086,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761092878079,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761092878079,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761092878477,"pid":6368,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":16724,"cpu":"9.29%","mem":"253.64 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761092878477,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761092938091,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761092938091,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761092938455,"pid":6368,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":16724,"cpu":"2.63%","mem":"234.66 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761092938455,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761092998093,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761092998093,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761092999255,"pid":6368,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":16724,"cpu":"0.00%","mem":"237.55 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761092999255,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761093058104,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761093058104,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761093058532,"pid":6368,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":16724,"cpu":"1.32%","mem":"238.91 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761093058532,"pid":6368,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761093092829,"pid":11452,"hostname":"DESKTOP-DF2SECE","msg":"[🚀 MAESTRO] Proceso Primario 11452 activado."}
+{"level":30,"time":1761093092830,"pid":11452,"hostname":"DESKTOP-DF2SECE","msg":"[🔥] Modo: Aislamiento Total (1 Sesión = 1 Proceso)."}
+{"level":30,"time":1761093092830,"pid":11452,"hostname":"DESKTOP-DF2SECE","msg":"[🤖 MAESTRO] Iniciando Jefe de Telegram..."}
+{"level":30,"time":1761093092839,"pid":11452,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] Cargando sesiones existentes desde la DB..."}
+{"level":30,"time":1761093092839,"pid":11452,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] 1 sesiones encontradas. Lanzando 1 Hijos..."}
+{"level":30,"time":1761093092839,"pid":11452,"hostname":"DESKTOP-DF2SECE","msg":"[LAUNCH] Creando nuevo Hijo para 7223378630..."}
+{"level":30,"time":1761093092852,"pid":11452,"hostname":"DESKTOP-DF2SECE","msg":"Enviando tarea 7223378630 al nuevo Hijo 7756"}
+{"level":30,"time":1761093093357,"pid":11452,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] ¡Todas las sesiones existentes han sido asignadas a sus Hijos!"}
+{"level":30,"time":1761093152849,"pid":11452,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761093152850,"pid":11452,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761093154084,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"[🚀 MAESTRO] Proceso Primario 14608 activado."}
+{"level":30,"time":1761093154084,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"[🔥] Modo: Aislamiento Total (1 Sesión = 1 Proceso)."}
+{"level":30,"time":1761093154084,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"[🤖 MAESTRO] Iniciando Jefe de Telegram..."}
+{"level":30,"time":1761093154091,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] Cargando sesiones existentes desde la DB..."}
+{"level":30,"time":1761093154092,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] 1 sesiones encontradas. Lanzando 1 Hijos..."}
+{"level":30,"time":1761093154092,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"[LAUNCH] Creando nuevo Hijo para 7223378630..."}
+{"level":30,"time":1761093154104,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"Enviando tarea 7223378630 al nuevo Hijo 14376"}
+{"level":30,"time":1761093154608,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] ¡Todas las sesiones existentes han sido asignadas a sus Hijos!"}
+{"level":30,"time":1761093214100,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761093214101,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761093214852,"pid":14608,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":14376,"cpu":"0.00%","mem":"111.45 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761093214852,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761093274108,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761093274109,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761093274636,"pid":14608,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":14376,"cpu":"1.22%","mem":"113.63 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761093274637,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761093334119,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761093334119,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761093334637,"pid":14608,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":14376,"cpu":"0.60%","mem":"113.98 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761093334637,"pid":14608,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761093394973,"pid":15148,"hostname":"DESKTOP-DF2SECE","msg":"[🚀 MAESTRO] Proceso Primario 15148 activado."}
+{"level":30,"time":1761093394974,"pid":15148,"hostname":"DESKTOP-DF2SECE","msg":"[🔥] Modo: Aislamiento Total (1 Sesión = 1 Proceso)."}
+{"level":30,"time":1761093394974,"pid":15148,"hostname":"DESKTOP-DF2SECE","msg":"[🤖 MAESTRO] Iniciando Jefe de Telegram..."}
+{"level":30,"time":1761093394982,"pid":15148,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] Cargando sesiones existentes desde la DB..."}
+{"level":30,"time":1761093394983,"pid":15148,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] 1 sesiones encontradas. Lanzando 1 Hijos..."}
+{"level":30,"time":1761093394983,"pid":15148,"hostname":"DESKTOP-DF2SECE","msg":"[LAUNCH] Creando nuevo Hijo para 7223378630..."}
+{"level":30,"time":1761093394998,"pid":15148,"hostname":"DESKTOP-DF2SECE","msg":"Enviando tarea 7223378630 al nuevo Hijo 5556"}
+{"level":30,"time":1761093395503,"pid":15148,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] ¡Todas las sesiones existentes han sido asignadas a sus Hijos!"}
+{"level":30,"time":1761093430116,"pid":12324,"hostname":"DESKTOP-DF2SECE","msg":"[🚀 MAESTRO] Proceso Primario 12324 activado."}
+{"level":30,"time":1761093430117,"pid":12324,"hostname":"DESKTOP-DF2SECE","msg":"[🔥] Modo: Aislamiento Total (1 Sesión = 1 Proceso)."}
+{"level":30,"time":1761093430117,"pid":12324,"hostname":"DESKTOP-DF2SECE","msg":"[🤖 MAESTRO] Iniciando Jefe de Telegram..."}
+{"level":30,"time":1761093430125,"pid":12324,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] Cargando sesiones existentes desde la DB..."}
+{"level":30,"time":1761093430126,"pid":12324,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] 1 sesiones encontradas. Lanzando 1 Hijos..."}
+{"level":30,"time":1761093430126,"pid":12324,"hostname":"DESKTOP-DF2SECE","msg":"[LAUNCH] Creando nuevo Hijo para 7223378630..."}
+{"level":30,"time":1761093430142,"pid":12324,"hostname":"DESKTOP-DF2SECE","msg":"Enviando tarea 7223378630 al nuevo Hijo 8784"}
+{"level":30,"time":1761093430657,"pid":12324,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] ¡Todas las sesiones existentes han sido asignadas a sus Hijos!"}
+{"level":30,"time":1761093644576,"pid":13804,"hostname":"DESKTOP-DF2SECE","msg":"[🚀 MAESTRO] Proceso Primario 13804 activado."}
+{"level":30,"time":1761093644577,"pid":13804,"hostname":"DESKTOP-DF2SECE","msg":"[🔥] Modo: Aislamiento Total (1 Sesión = 1 Proceso)."}
+{"level":30,"time":1761093644577,"pid":13804,"hostname":"DESKTOP-DF2SECE","msg":"[🤖 MAESTRO] Iniciando Jefe de Telegram..."}
+{"level":30,"time":1761093644586,"pid":13804,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] Cargando sesiones existentes desde la DB..."}
+{"level":30,"time":1761093644586,"pid":13804,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] 1 sesiones encontradas. Lanzando 1 Hijos..."}
+{"level":30,"time":1761093644586,"pid":13804,"hostname":"DESKTOP-DF2SECE","msg":"[LAUNCH] Creando nuevo Hijo para 7223378630..."}
+{"level":30,"time":1761093644600,"pid":13804,"hostname":"DESKTOP-DF2SECE","msg":"Enviando tarea 7223378630 al nuevo Hijo 13712"}
+{"level":30,"time":1761093645114,"pid":13804,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] ¡Todas las sesiones existentes han sido asignadas a sus Hijos!"}
+{"level":30,"time":1761093732032,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[🚀 MAESTRO] Proceso Primario 1152 activado."}
+{"level":30,"time":1761093732033,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[🔥] Modo: Aislamiento Total (1 Sesión = 1 Proceso)."}
+{"level":30,"time":1761093732033,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[🤖 MAESTRO] Iniciando Jefe de Telegram..."}
+{"level":30,"time":1761093732041,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] Cargando sesiones existentes desde la DB..."}
+{"level":30,"time":1761093732042,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] 1 sesiones encontradas. Lanzando 1 Hijos..."}
+{"level":30,"time":1761093732042,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[LAUNCH] Creando nuevo Hijo para 7223378630..."}
+{"level":30,"time":1761093732058,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"Enviando tarea 7223378630 al nuevo Hijo 9548"}
+{"level":30,"time":1761093732569,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[MAESTRO] ¡Todas las sesiones existentes han sido asignadas a sus Hijos!"}
+{"level":30,"time":1761093792057,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761093792058,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761093792987,"pid":1152,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":9548,"cpu":"0.00%","mem":"98.58 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761093792987,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761093852071,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761093852071,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761093852498,"pid":1152,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":9548,"cpu":"0.16%","mem":"100.02 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761093852498,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":30,"time":1761093912075,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761093912076,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 1"}
+{"level":30,"time":1761093912629,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[🧹 MAESTRO] Orden de limpieza para 7223378630 (Full: true)"}
+{"level":30,"time":1761093912630,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"Enviando orden de limpieza (Full: true) al Hijo 9548..."}
+{"level":30,"time":1761093913168,"pid":1152,"hostname":"DESKTOP-DF2SECE","session":7223378630,"pid":9548,"cpu":"0.00%","mem":"100.30 MB","msg":"Stats del Worker"}
+{"level":30,"time":1761093913168,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"---------------------------------"}
+{"level":40,"time":1761093915638,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[KILL] El Hijo 9548 no terminó. Matando a la fuerza..."}
+{"level":30,"time":1761093915666,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"Hijo 9548 (Sesión 7223378630) ha terminado (Code: null, Signal: SIGTERM)."}
+{"level":50,"time":1761093915667,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[❌ MAESTRO] Hijo 9548 murió inesperadamente (Señal: SIGTERM, Código: null). No estaba en el mapa."}
+{"level":30,"time":1761093972079,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761093972080,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 0"}
+{"level":30,"time":1761093972080,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"... No hay workers activos."}
+{"level":30,"time":1761094032087,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761094032087,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 0"}
+{"level":30,"time":1761094032087,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"... No hay workers activos."}
+{"level":30,"time":1761094092107,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"--- [📊 METRICS DASHBOARD] ---"}
+{"level":30,"time":1761094092107,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"[📈] Sesiones Activas: 0"}
+{"level":30,"time":1761094092107,"pid":1152,"hostname":"DESKTOP-DF2SECE","msg":"... No hay workers activos."}
