@@ -133,7 +133,6 @@ const buildMainMenu = async (chatId, user, whatsappConnected) => {
       ? [{ text: ' Desconectar Sesión', callback_data: 'disconnect_whatsapp' }] 
       : [{ text: ' Iniciar Sesion', callback_data: 'start_pairing' }],
     [
-      { text: ' Cambiar Prefijo', callback_data: 'change_prefix' },
       { text: ' Contactar Soporte', url: 'https://wa.me/593969533280' } // URL del owner
     ],
     
@@ -588,22 +587,6 @@ const allowedForEveryone = ['back_to_menu'];
             await safeEditCaptionOrMedia(chatId, messageId, messageObj, menu.text, menu.options.reply_markup, menu.options.parse_mode);
             break;
           }
-         case 'change_prefix': {
-            // Guardamos el messageId para poder editar el mensaje original después
-            userStates[chatId] = { awaitingNewPrefix: true, messageId: messageId };
-            
-            const text = 
-              `<blockquote>✏️ <b>Eitar prefijo:</b>\n\n`+
-              `Tu prefijo actual es <code>${getPrefix(chatId)}</code>\n\n` +
-              `<b>Por favor envia el nuevo prefijo que deseas usar</b>\n` +
-              `<i>Ej: ! / # $)</i></blockquote>`;
-              
-            await safeEditCaptionOrMedia(chatId, messageId, messageObj, text, {
-              inline_keyboard: [[{ text: '⬅️ Cancelar y Volver', callback_data: 'back_to_menu' }]]
-            }, 'HTML');
-            break;
-          }
-
           case 'disconnect_whatsapp': {
             await cleanSession(chatId, false, true); // fullClean
             const confirmText = 'Tu sesión ha sido eliminada correctamente.';
@@ -782,38 +765,6 @@ bot.on('message', async (msg) => {
   // =================================================================
   // BLOQUE PARA MANEJAR EL CAMBIO DE PREFIJO
   // =================================================================
- if (userStates[chatId]?.awaitingNewPrefix) {
-    const messageId = userStates[chatId].messageId; // Obtenemos el ID del mensaje a editar
-    const newPrefix = msg.text.trim();
-    
-    // Borramos el mensaje del usuario para mantener el chat limpio
-    try { await bot.deleteMessage(chatId, msg.message_id); } catch(e) {}
-
-    if (newPrefix.length > 0 && newPrefix.length <= 5 && !/\s/.test(newPrefix)) {
-      setPrefix(chatId, newPrefix);
-      delete userStates[chatId]; // Limpiar el estado
-      
-      // 1. Mostramos la confirmación temporal editando el mensaje original
-      const confirmationText = `✅ <b>Éxito:</b> Tu prefijo ha sido actualizado a '<code>${newPrefix}</code>'`;
-      await safeEditCaptionOrMedia(chatId, messageId, null, confirmationText, undefined, 'HTML');
-      
-      // 2. Después de 2.5 segundos, volvemos al panel principal.
-      // La confirmación "desaparece" porque editamos el mensaje de nuevo.
-      setTimeout(async () => {
-        await showOrEditMenu(chatId, messageId);
-      }, 2500);
-
-    } else {
-      // Si el prefijo es inválido, avisamos y damos la opción de volver
-      const errorText = '❌ <b>Prefijo inválido.</b> Debe tener de 1 a 5 caracteres sin espacios.';
-      await safeEditCaptionOrMedia(chatId, messageId, null, errorText, {
-          inline_keyboard: [[{ text: '⬅️ Volver', callback_data: 'back_to_menu' }]]
-      }, 'HTML');
-      delete userStates[chatId];
-    }
-    return; // Importante: terminar aquí
-  }
-
   // =================================================================
   // BLOQUE PARA MANEJAR EL NÚMERO DE TELÉFONO (PAIRING)
   // =================================================================

@@ -1,228 +1,186 @@
-// launcher.js (Nivel 6: Monitor y Métrica)
+// launcher.js (¡¡COMPLETO Y FINAL v9 - CERO PINO!!)
 const cluster = require('cluster');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const TelegramBot = require('node-telegram-bot-api');
-const usersDB = require('./lib/users.js');
+const usersDB = require('./lib/users.js'); // Asegúrate que las funciones existen y son async
 const chocoplusHandler = require('./chocoplus.js');
 const dotenv = require('dotenv');
-const pino = require('pino');
-const pidusage = require('pidusage');
+const pino = require('pino'); // <-- ELIMINADO
+// const pidusage = require('pidusage'); // <-- ELIMINADO (para métricas)
 
 dotenv.config();
 
-// --- Configuración de Logging (Req 7) ---
-const logDir = path.join(__dirname, 'logs');
-if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
-const masterLogger = pino({
-    level: 'info',
-}, pino.destination(path.join(logDir, 'master.log')));
+// --- Ya no hay configuración de Logging Pino ---
 
-const sessionWorkers = new Map(); // Sigue igual
+const sessionWorkers = new Map(); // Mapa: telegram_id (string) -> worker
 
 if (cluster.isPrimary) {
-    masterLogger.info(`[🚀 MAESTRO] Proceso Primario ${process.pid} activado.`);
-    masterLogger.info(`[🔥] Modo: Aislamiento Total (1 Sesión = 1 Proceso).`);
+    console.log(`[🚀 MAESTRO] PID ${process.pid} activado en ${os.cpus().length} CPUs.`); // Log Consola
+    console.log(`[🔥] Modo: Aislamiento Total (1 Sesión = 1 Proceso Hijo).`); // Log Consola
 
-    // --- Manejadores Globales de Errores (Req 6) ---
-    process.on('uncaughtException', (err, origin) => {
-        masterLogger.fatal(err, `UNCAUGHT EXCEPTION EN MAESTRO. Origin: ${origin}`);
-    });
-    process.on('unhandledRejection', (reason, promise) => {
-        masterLogger.error({ reason, promise }, 'UNHANDLED REJECTION EN MAESTRO');
-    });
-    process.setMaxListeners(0); // Req 6
+    // --- Manejadores Globales de Errores (Maestro - Usan Console) ---
+    process.on('uncaughtException', (err, origin) => console.error(`[!!! MAESTRO UNCAUGHT ${process.pid} !!!]`, err, 'Origin:', origin));
+    process.on('unhandledRejection', (reason, promise) => console.error(`[!!! MAESTRO UNHANDLED ${process.pid} !!!]`, { reason, promise }));
+    process.setMaxListeners(0); // Sin límite
 
-    masterLogger.info(`[🤖 MAESTRO] Iniciando Jefe de Telegram...`);
-    const TOKEN = process.env.BOT_TOKEN || '8470263467:AAEwJKUW_fYF1neu-Kwgspgdwn6xMeNHTec';
+    // --- Bot de Telegram ---
+    console.log(`[🤖 MAESTRO] Iniciando Bot Telegram...`); // Log Consola
+    const TOKEN = process.env.BOT_TOKEN || '8470263467:AAEwJKUW_fYF1neu-Kwgspgdwn6xMeNHTec'; // <- PON TU TOKEN REAL AQUÍ O EN .env
+    if (!TOKEN || TOKEN === 'TU_BOT_TOKEN_AQUI') {
+        console.error("¡¡¡ERROR FATAL: BOT_TOKEN no definido!!!"); // Log Consola
+        process.exit(1);
+    }
     const bot = new TelegramBot(TOKEN, { polling: true });
-    const userStates = {};
+    const userStates = {}; // Estado temporal
 
+    // --- Pasa dependencias a chocoplusHandler ---
     chocoplusHandler(bot, {
         userStates,
-        activeSessions: {},
 
-        // --- Lógica de Limpieza (Sin cambios, ya era robusta) ---
+        // --- Limpieza de Sesión (Usa Console) ---
         cleanSession: async (telegram_id, notifyUser = false, fullClean = false) => {
-            masterLogger.info(`[🧹 MAESTRO] Orden de limpieza para ${telegram_id} (Full: ${fullClean})`);
-            const worker = sessionWorkers.get(telegram_id);
-
+            const stringId = String(telegram_id);
+            console.log(`[🧹 MAESTRO] Orden limpieza para ${stringId} (Full: ${fullClean})`); // Log Consola
+            const worker = sessionWorkers.get(stringId);
             if (worker) {
-                masterLogger.info(`Enviando orden de limpieza (Full: ${fullClean}) al Hijo ${worker.process.pid}...`);
-                worker.send({ type: 'CLEAN_SESSION', telegram_id, notifyUser, fullClean });
+                console.log(`Enviando orden CLEAN_SESSION a Hijo ${worker.process.pid}...`); // Log Consola
+                worker.send({ type: 'CLEAN_SESSION', telegram_id: stringId, notifyUser, fullClean });
 
                 const cleanupTimeout = setTimeout(() => {
-                    if (sessionWorkers.has(telegram_id)) {
-                        masterLogger.warn(`[KILL] El Hijo ${worker.process.pid} no terminó. Matando a la fuerza...`);
-                        worker.kill();
+                    if (sessionWorkers.has(stringId)) {
+                        console.warn(`[KILL MAESTRO] Hijo ${worker.process.pid} (Sesión ${stringId}) no terminó limpieza. Matando...`); // Log Consola WARN
+                        worker.kill('SIGKILL');
+                        sessionWorkers.delete(stringId);
                     }
-                }, 3000);
+                }, 8000); // 8s
 
                 worker.once('exit', (code, signal) => {
-                    masterLogger.info(`Hijo ${worker.process.pid} (Sesión ${telegram_id}) ha terminado (Code: ${code}, Signal: ${signal}).`);
+                    console.log(`[MAESTRO] Hijo ${worker.process.pid} (Sesión ${stringId}) terminó (Code: ${code}, Signal: ${signal}).`); // Log Consola
                     clearTimeout(cleanupTimeout);
-                    sessionWorkers.delete(telegram_id);
+                    if (sessionWorkers.has(stringId)) sessionWorkers.delete(stringId);
                 });
-
-            } else {
-                // ... (Tu lógica de fallback es buena, la mantenemos) ...
-                masterLogger.warn(`[MAESTRO] Se pidió limpiar ${telegram_id} pero no se encontró Hijo.`);
+            } else { // Si no se encontró worker
+                console.warn(`[MAESTRO] Limpiar ${stringId}: No se encontró Hijo activo.`); // Log Consola WARN
                 if (fullClean) {
+                    console.log(`[MAESTRO] Intentando limpieza fallback para ${stringId} (DB y Archivos)...`); // Log Consola
                     try {
-                        await usersDB.clearUserWhatsapp(telegram_id);
-                        masterLogger.info(`[MAESTRO] Fallback: Limpiado ${telegram_id} de la DB.`);
-                        // ... (Tu lógica de borrado de carpeta es buena) ...
+                        await usersDB.clearUserWhatsapp(stringId);
+                        console.log(`[MAESTRO] Fallback DB clean OK para ${stringId}.`); // Log Consola
+
+                        // Borrar carpeta (con callback para loguear errores)
+                        const sessionDir = path.join(__dirname, 'lib', 'pairing', stringId);
+                        if (fs.existsSync(sessionDir)) {
+                            console.log(`[MAESTRO] Intentando borrar carpeta fallback: ${sessionDir}`); // Log Consola
+                             fs.rm(sessionDir, { recursive: true, force: true }, (err) => { // Usar fs.rm con callback
+                                 if (err) console.error(`[MAESTRO ERROR] Fallo al borrar carpeta fallback ${sessionDir}:`, err); // Log Consola ERROR
+                                 else console.log(`[MAESTRO] Carpeta fallback ${sessionDir} borrada.`); // Log Consola
+                             });
+                        }
+
                     } catch (err) {
-                        masterLogger.error(err, `[MAESTRO] Fallback DB clean failed for ${telegram_id}`);
+                        console.error(`[MAESTRO ERROR] Fallo en limpieza fallback para ${stringId}:`, err); // Log Consola ERROR
                     }
                 }
             }
-        }, // Fin cleanSession
+        },
 
-        // --- Lógica de Inicio (Sin cambios) ---
+        // --- Inicio de Sesión (Usa Console) ---
         startSession: (telegram_id, whatsapp_number) => {
-            masterLogger.info(`[▶️ MAESTRO] Orden de inicio para ${telegram_id}/${whatsapp_number}`);
-            if (sessionWorkers.has(telegram_id)) {
-                masterLogger.warn(`[MAESTRO] ${telegram_id} ya tiene un Hijo. Matando al antiguo...`);
-                sessionWorkers.get(telegram_id).kill();
-            }
-            launchWorkerForSession({ telegram_id, whatsapp_number });
-        },
-
-        // =======================================================
-        //           ¡¡NUEVA FUNCIÓN DE INVALIDACIÓN!!
-        // =======================================================
-        /**
-         * Notifica al hijo que debe borrar el prefijo de un usuario de su caché.
-         * Llámala desde chocoplus.js cuando un usuario cambie su prefijo.
-         * @param {string} telegram_id 
-         */
-        invalidatePrefixCache: (telegram_id) => {
-            const worker = sessionWorkers.get(telegram_id);
-            if (worker) {
-                masterLogger.info(`[CACHE ♻️] Enviando invalidación de prefix cache al Hijo ${worker.process.pid} (TID: ${telegram_id})`);
-                worker.send({ type: 'INVALIDATE_PREFIX_CACHE', telegram_id: telegram_id });
+            const stringId = String(telegram_id);
+            console.log(`[▶️ MAESTRO] Orden inicio para ${stringId}/${whatsapp_number}`); // Log Consola
+            if (sessionWorkers.has(stringId)) {
+                const oldWorker = sessionWorkers.get(stringId);
+                console.warn(`[MAESTRO] ${stringId} ya tiene Hijo (${oldWorker.process.pid}). Matando al antiguo...`); // Log Consola WARN
+                oldWorker.kill('SIGTERM');
+                 setTimeout(() => launchWorkerForSession({ telegram_id: stringId, whatsapp_number }), 1500); // 1.5s delay
             } else {
-                masterLogger.warn(`[CACHE ♻️] Se pidió invalidar prefix para ${telegram_id}, pero no se encontró Hijo.`);
+                 launchWorkerForSession({ telegram_id: stringId, whatsapp_number });
             }
         },
-        // =======================================================
 
+        // Funciones DB (se mantienen)
         updateUserWhatsapp: usersDB.updateUserWhatsapp,
         clearUserWhatsapp: usersDB.clearUserWhatsapp
     });
 
-    // --- Manejo de Workers Muertos (Simplificado y con logging) ---
+    // --- Manejo Centralizado de Workers Muertos (Usa Console) ---
     cluster.on('exit', (worker, code, signal) => {
-        let telegram_id = null;
+        let telegram_id_exited = null;
         for (const [id, w] of sessionWorkers.entries()) {
-            if (w.process.pid === worker.process.pid) {
-                telegram_id = id;
-                break;
-            }
+            if (w.process.pid === worker.process.pid) { telegram_id_exited = id; break; }
         }
-        if (telegram_id) {
-            masterLogger.warn(`Hijo ${worker.process.pid} (Sesión ${telegram_id}) salió (Code: ${code}, Signal: ${signal}). Limpiando del mapa.`);
-            sessionWorkers.delete(telegram_id);
-            // NOTA: Aquí podrías decidir si relanzarlo automáticamente
-            // Por ahora, la reconexión se maneja desde el hijo. Si el hijo muere,
-            // el usuario de Telegram tendría que darle /start de nuevo.
-            // Para un reinicio automático, se necesitaría un re-lanzamiento aquí.
-        } else {
-            masterLogger.error(`[❌ MAESTRO] Hijo ${worker.process.pid} murió inesperadamente (Señal: ${signal}, Código: ${code}). No estaba en el mapa.`);
+
+        if (telegram_id_exited && sessionWorkers.has(telegram_id_exited)) {
+            console.warn(`[MAESTRO WARN] Hijo ${worker.process.pid} (Sesión ${telegram_id_exited}) salió inesperadamente (Code: ${code}, Signal: ${signal}). Limpiando.`); // Log Consola WARN
+            sessionWorkers.delete(telegram_id_exited);
+            if (code !== 0 && code !== null) { // Notificar si no fue salida limpia
+                 bot.sendMessage(telegram_id_exited, `⚠️ Tu sesión WhatsApp (${telegram_id_exited}) se detuvo. Intenta /start de nuevo.`).catch(e => console.warn(`[MAESTRO WARN] Fallo al notificar ${telegram_id_exited}:`, e.message)); // Log Consola WARN
+            }
+        } else if (!telegram_id_exited) {
+            console.error(`[❌ MAESTRO ERROR] Hijo ${worker.process.pid} murió (Señal: ${signal}, Código: ${code}). No mapeado.`); // Log Consola ERROR
         }
     });
 
+    // --- Función para Lanzar Worker (Usa Console) ---
     function launchWorkerForSession(session) {
-        masterLogger.info(`[LAUNCH] Creando nuevo Hijo para ${session.telegram_id}...`);
+        const stringId = String(session.telegram_id);
+        console.log(`[LAUNCH MAESTRO] Creando Hijo para ${stringId}...`); // Log Consola
         const worker = cluster.fork();
-        sessionWorkers.set(session.telegram_id, worker);
-
-        masterLogger.info(`Enviando tarea ${session.telegram_id} al nuevo Hijo ${worker.process.pid}`);
-        worker.send({ type: 'START_SESSION', ...session });
+        sessionWorkers.set(stringId, worker);
+        console.log(`[MAESTRO] Enviando START_SESSION a Hijo ${worker.process.pid} para ${stringId}`); // Log Consola
+        worker.send({ type: 'START_SESSION', telegram_id: stringId, whatsapp_number: session.whatsapp_number });
     }
 
-    // --- Cargar sesiones existentes (Con logging) ---
+    // --- Cargar Sesiones Existentes (Usa Console) ---
     (async () => {
-        masterLogger.info("[MAESTRO] Cargando sesiones existentes desde la DB...");
+        console.log("[MAESTRO] Cargando sesiones existentes desde DB..."); // Log Consola
         try {
             const allUsers = await usersDB.getAllUsersWithWhatsapp();
-            if (allUsers.length > 0) {
-                masterLogger.info(`[MAESTRO] ${allUsers.length} sesiones encontradas. Lanzando ${allUsers.length} Hijos...`);
-                for (const user of allUsers) {
-                    launchWorkerForSession(user);
-                    await new Promise(r => setTimeout(r, 500));
+            if (allUsers?.length > 0) {
+                console.log(`[MAESTRO] ${allUsers.length} sesiones encontradas. Lanzando Hijos...`); // Log Consola
+                for (let i = 0; i < allUsers.length; i++) {
+                    const sessionData = { telegram_id: String(allUsers[i].telegram_id), whatsapp_number: allUsers[i].whatsapp_number };
+                    if (sessionData.telegram_id && sessionData.whatsapp_number) {
+                        launchWorkerForSession(sessionData);
+                        await new Promise(r => setTimeout(r, 750)); // Delay
+                    } else {
+                         console.warn("[MAESTRO WARN] Registro de usuario inválido omitido:", allUsers[i]); // Log Consola WARN
+                    }
                 }
-                masterLogger.info("[MAESTRO] ¡Todas las sesiones existentes han sido asignadas a sus Hijos!");
+                console.log("[MAESTRO] Todos los Hijos para sesiones existentes lanzados."); // Log Consola
             } else {
-                masterLogger.info("[MAESTRO] No se encontraron sesiones existentes para reconectar.");
+                console.log("[MAESTRO] No hay sesiones activas guardadas en la DB."); // Log Consola
             }
         } catch (e) {
-            masterLogger.fatal(e, "[MAESTRO] Error catastrófico cargando sesiones existentes");
+            console.error("[!!! MAESTRO FATAL !!!] Error FATAL cargando sesiones existentes:", e); // Log Consola ERROR FATAL
+            // process.exit(1); // Considerar salir si falla la carga inicial
         }
     })();
 
-    // --- NUEVO: Panel de Métricas (Req 5) ---
-    setInterval(async () => {
-        masterLogger.info('--- [📊 METRICS DASHBOARD] ---');
-        masterLogger.info(`[📈] Sesiones Activas: ${sessionWorkers.size}`);
+    // --- Panel de Métricas (ELIMINADO - Usaba Pino Logger) ---
+    // Si necesitas métricas, usa `pm2 monit` o implementa una solución diferente.
 
-        if (sessionWorkers.size === 0) {
-            masterLogger.info('... No hay workers activos.');
-            return;
-        }
-
-        const statsPromises = [];
-        for (const [id, worker] of sessionWorkers.entries()) {
-            statsPromises.push(
-                pidusage(worker.process.pid)
-                    .then(stats => ({ id, pid: worker.process.pid, stats }))
-                    .catch(e => ({ id, pid: worker.process.pid, stats: null, error: e.message }))
-            );
-        }
-
-        const results = await Promise.all(statsPromises);
-
-        for (const res of results) {
-            if (res.stats) {
-                masterLogger.info({
-                    session: res.id,
-                    pid: res.pid,
-                    cpu: `${res.stats.cpu.toFixed(2)}%`,
-                    mem: `${(res.stats.memory / 1024 / 1024).toFixed(2)} MB`
-                }, 'Stats del Worker');
-            } else {
-                masterLogger.warn({ session: res.id, pid: res.pid, error: res.error }, 'No se pudieron obtener stats del worker');
-            }
-        }
-        masterLogger.info('---------------------------------');
-
-    }, 60 * 1000); // Cada 60 segundos
-
-} else {
-    // =================================================================
-    // CÓDIGO DEL WORKER (HIJO)
-    // =================================================================
-    console.log(`[⚙️ HIJO] Bot iniciado en proceso hijo (PID: ${process.pid}). ¡Listo para recibir sesión!`);
-
-    // --- Manejadores Globales de Errores (Req 6) ---
-    // Logearán al logger de la sesión una vez que se inicialice
+} else { // Código del Worker (Hijo)
+    // --- Manejadores globales ANTES de cargar main.js (Usan Console) ---
     process.on('uncaughtException', (err, origin) => {
-        console.error(`[HIJO ${process.pid}] UNCAUGHT EXCEPTION:`, err, 'Origin:', origin);
-        // Esto debería ser logeado por el logger de pino de la sesión
+        console.error(`[!!! FATAL HIJO ${process.pid} PRE-MAIN UNCAUGHT !!!]`, err, 'Origin:', origin);
+        process.exit(1); // Salir si hay error antes de cargar main
     });
     process.on('unhandledRejection', (reason, promise) => {
-        console.error(`[HIJO ${process.pid}] UNHANDLED REJECTION:`, reason, 'Promise:', promise);
+        console.error(`[!!! FATAL HIJO ${process.pid} PRE-MAIN UNHANDLED !!!]`, reason, 'Promise:', promise);
+         process.exit(1); // Salir también
     });
-    process.setMaxListeners(0); // Req 6
+    process.setMaxListeners(0);
 
-    // --- Optimización de RAM (Tu código es bueno, lo mantenemos) ---
-    const originalReadFileSync = fs.readFileSync;
-    const fileCache = new Map();
-    // ... (Tu lógica de caché de archivos se mantiene) ...
-    console.log(`[👍 HIJO ${process.pid}] Optimización de RAM aplicada.`);
-    
-    // --- Inicia el supervisor de sesión ---
-    require('./main.js');
+    console.log(`[⚙️ HIJO] PID ${process.pid} iniciado. Cargando main.js...`); // Log Consola
+
+    // Carga diferida de main.js
+    try {
+        require('./main.js'); // Carga el supervisor de sesión
+    } catch (mainLoadError) {
+        console.error(`[!!! FATAL HIJO ${process.pid} !!!] Error al cargar main.js:`, mainLoadError); // Log Consola ERROR FATAL
+        process.exit(1); // Salir si main.js no carga
+    }
 }
