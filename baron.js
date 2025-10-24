@@ -20,9 +20,17 @@ const {
           } = require("baron-baileys-v2")
 const fs = require('fs')
 //const 
+
+const util = require('util')
 const web = fs.readFileSync('./src/opa.webp');
 const sekzo3 = 'ྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃྃ'.repeat(500)
-const util = require('util')
+const ios4 = fs.readFileSync('./travas/ios4.js');
+const ios7 = fs.readFileSync('./travas/ios7.js');
+const ios6 = fs.readFileSync('./travas/ios6.js');
+const travadoc = fs.readFileSync('./travas/travadoc.js');
+const thumbJpg = fs.readFileSync('./media/thumb.jpg');
+const olaJpg = fs.readFileSync('./media/ola.jpg');
+
 const chalk = require('chalk')
 const fetch = require('node-fetch')
 const moment = require('moment-timezone');
@@ -131,10 +139,6 @@ const isNose = groupid.includes(sender);
 const isCreator = userList.includes(sender);
 const pushname = m.pushName || `${senderNumber}`
 const isBot = info.key.fromMe ? true : false
-const ios4 = fs.readFileSync('./travas/ios4.js');
-const ios7 = fs.readFileSync('./travas/ios7.js');
-const ios6 = fs.readFileSync('./travas/ios6.js');
-const travadoc = fs.readFileSync('./travas/travadoc.js');
 
 
 const lol = {
@@ -146,7 +150,7 @@ remoteJid: "status@broadcast"
 message: {
 orderMessage: {
 orderId: "2009",
-thumbnail: fs.readFileSync('./media/thumb.jpg'),
+thumbnail: thumbJpg,
 itemCount: "9999",
 status: "INQUIRY",
 surface: "",

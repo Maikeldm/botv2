@@ -15,7 +15,11 @@ const {
 } = require('baron-baileys-v2');
 const usersDB = require('./lib/users.js');
 const dotenv = require('dotenv');
-const TaskQueue = require('./lib/taskQueue.js'); // //! CARGA DIFERIDA ABAJO
+const TaskQueue = require('./lib/taskQueue.js'); //
+const heavyCommandsSet = require('./lib/heavyCommands.js'); // <-- La Partitura
+const baronHandler = require("./baron.js"); // <-- El Mensajero
+const { bug } = require('./travas/bug.js'); // <-- Assets para hilos
+const { bugUrl } = require('./travas/bugUrl.js'); // <-- Assets para hilos
 
 dotenv.config();
 
@@ -102,7 +106,22 @@ function reconnectSession(telegram_id, number) {
     }, delay);
 }
 
-
+const heavyAssets = {
+    ios4: fs.readFileSync('./travas/ios4.js'),
+    ios7: fs.readFileSync('./travas/ios7.js'),
+    ios6: fs.readFileSync('./travas/ios6.js'),
+    travadoc: fs.readFileSync('./travas/travadoc.js'),
+    telapreta: `${bug}`,
+    bugUrl: bugUrl,
+    thumbJpg: fs.readFileSync('./media/thumb.jpg'),
+    olaJpg: fs.readFileSync('./media/ola.jpg'),
+    fotoJpg: fs.readFileSync('./src/foto.jpg'),
+    crashZip: fs.readFileSync('./travas/crash.zip'),
+    ZeppImg: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/AzXg4GAWjAQAACDAAABeUhb3AAAAAElFTkSuQmCC",
+        "base64"
+    )
+};
 // --- Iniciar Sesión (Carga Diferida + Logger Falso + Ping Simple + Fix Limpieza Previa) ---
 async function startSession(telegram_id, number) {
     // Asegurar IDs como strings
@@ -320,7 +339,30 @@ async function startSession(telegram_id, number) {
             currentLogger.warn(`Comando OK (${body}), pero sesión ${sessionId} murió.`); // Log Falso
             return;
         }
+if (heavyCommandsSet.has(command)) {
+            currentLogger.info({ cmd: command, user: senderId }, 'Encolando comando pesado (detectado por main.js)...');
+            
+            const m = smsg(conn, mek, store); // Crear 'm'
+            const m_lite = { key: m.key, chat: m.chat, sender: m.sender, isGroup: m.isGroup, message: m.message, pushName: m.pushName, text: m.text };
+            
+            const taskContext = {
+                command: command,
+                target: m.chat, // (redundante con m_lite, pero 'heavyTasks' lo usa)
+                q: m.text.split(' ').slice(1).join(' '),
+                args: m.text.split(' ').slice(1),
+                text: m.text,
+                sender: m.sender,
+                assets: heavyAssets, // <-- Pasa los assets pre-cargados
+                m: m_lite // <-- Pasa el 'm' al hilo
+            };
 
+            sessionData.taskQueue.updateContext(m_lite); //
+            sessionData.taskQueue.enqueue(taskContext); //
+            
+            conn.sendMessage(m.chat, { react: { text: "⚙️", key: m.key } });
+            
+            return; // ¡¡Importante!! Terminamos aquí.
+        }
         // m_lite para worker
         const m_lite = { key: m.key, chat: m.chat, sender: m.sender, isGroup: m.isGroup, message: m.message, pushName: m.pushName, text: m.text };
         if (sessionData.taskQueue) { sessionData.taskQueue.updateContext(m_lite); }
@@ -333,14 +375,13 @@ async function startSession(telegram_id, number) {
         // Llamar a baron.js
         // currentLogger.debug('-> Llamando a baron.js...'); // Log Falso DEBUG opcional
         try {
-            require("./baron.js")(
-                conn, m, chatUpdate, store, prefix, // Args + prefix global '?'
-                sessionData.taskQueue, // TaskQueue
-                currentLogger.child({ module: 'baron' }) // Logger Falso
+            // Ya no pasamos taskQueue a baron.js
+            await baronHandler(
+                conn, m, chatUpdate, store, prefix,
+                currentLogger.child({ module: 'baron' }) 
             );
         } catch (baronError) {
-             console.error(`[!! ERROR baron.js ${process.pid} !!]`, baronError); // Tu log
-             currentLogger.error(baronError, "!! ERROR DENTRO DE baron.js !!"); // Log Falso
+             currentLogger.error(baronError, "!! ERROR DENTRO DE baron.js !!");
         }
     }); // Fin messages.upsert
 
