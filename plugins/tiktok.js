@@ -4,7 +4,7 @@ const fetch = require('node-fetch');
 
 module.exports = {
     name: 'tiktok',
-    alias: ['obtiktok'], // <-- He añadido 'tt' aquí para que también funcione
+    alias: ['tt'], // <-- He añadido 'tt' aquí para que también funcione
 
     // CAMBIO 1: La función ahora acepta un cuarto argumento llamado 'context'
     async execute(conn, m, args, context) {

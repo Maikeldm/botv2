@@ -17,13 +17,14 @@ module.exports = {
             prepareWAMessageMedia, 
             generateWAMessageFromContent, 
             proto, 
-            cataui 
+            cataui,
+            olaJpg,
         } = context;
 
         // 2. Tu código original, sin ninguna modificación en su lógica
         if (!isBot && !isCreator) return;
 
-        var messa = await prepareWAMessageMedia({ image: fs.readFileSync('./media/ola.jpg') }, { upload: conn.waUploadToServer });
+        var messa = await prepareWAMessageMedia( image, olaJpg , { upload: conn.waUploadToServer });
         
         var catalog = generateWAMessageFromContent(from, proto.Message.fromObject({
             "productMessage": {

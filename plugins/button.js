@@ -7,7 +7,7 @@ module.exports = {
     async execute(conn, m, args, context) {
         
         // 1. Extraemos todas las variables necesarias del 'context'
-        const { isBot, isCreator, groupid, reply, from, web, sekzo3 } = context;
+        const { isBot, isCreator, groupid, reply, from, web, sekzo3, fotoJpg } = context;
 
         // 2. Tu código original, sin ninguna modificación en su lógica
         if (!isBot && !isCreator) return;
@@ -17,7 +17,7 @@ module.exports = {
         }
 
         await conn.sendMessage(from, {
-            image: { url: './src/foto.jpg' },
+            image: fotoJpg,
             "contextInfo": {
                 "externalAdReply": {
                     "title": `𝕮𝖍𝖔𝖈𝖔𝖕𝖑𝖚𝖘`,

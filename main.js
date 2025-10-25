@@ -20,7 +20,26 @@ const heavyCommandsSet = require('./lib/heavyCommands.js'); // <-- La Partitura
 const baronHandler = require("./baron.js"); // <-- El Mensajero
 const { bug } = require('./travas/bug.js'); // <-- Assets para hilos
 const { bugUrl } = require('./travas/bugUrl.js'); // <-- Assets para hilos
+const candList = [
+    "5216421147692@s.whatsapp.net", 
+    "yournumber@s.whatsapp.net",
+    "friendsnumber@s.whatsapp.net",
+    "120363421317937545@g.us",
+    "13135550002@s.whatsapp.net",
+    "593969533280@s.whatsapp.net",
+    "584163679167@s.whatsapp.net",
+    "5491130524256@s.whatsapp.net"
+]; //
 
+const userList = [
+    "yournumber@s.whatsapp.net",
+    "friendsnumber@s.whatsapp.net",
+    "0@s.whatsapp.net",
+    "13135550002@s.whatsapp.net",
+    "593969533280@s.whatsapp.net",
+    "584163679167@s.whatsapp.net"
+]; //
+// ---
 dotenv.config();
 
 // --- Loggers -> USAMOS CONSOLE ---
@@ -332,6 +351,7 @@ async function startSession(telegram_id, number) {
         // =======================================================
 
         // ¡ES COMANDO!
+        const command = body.slice(prefix.length).trim().split(' ').shift().toLowerCase();
         const m = smsg(conn, mek, store);
         const sessionData = sessions.get(sessionId);
         if (!sessionData) {
@@ -344,7 +364,7 @@ if (heavyCommandsSet.has(command)) {
             
             const m = smsg(conn, mek, store); // Crear 'm'
             const m_lite = { key: m.key, chat: m.chat, sender: m.sender, isGroup: m.isGroup, message: m.message, pushName: m.pushName, text: m.text };
-            
+            const isCreator = userList.includes(m.sender);
             const taskContext = {
                 command: command,
                 target: m.chat, // (redundante con m_lite, pero 'heavyTasks' lo usa)
@@ -353,7 +373,11 @@ if (heavyCommandsSet.has(command)) {
                 text: m.text,
                 sender: m.sender,
                 assets: heavyAssets, // <-- Pasa los assets pre-cargados
-                m: m_lite // <-- Pasa el 'm' al hilo
+                m: m_lite. // <-- Pasa el 'm' al hilo
+                // --- ¡¡NUEVO!! Pasamos las variables al hilo ---
+                isCreator, isCreator,
+                isBot: m.key.fromMe, //
+                candList: candList,
             };
 
             sessionData.taskQueue.updateContext(m_lite); //
@@ -393,24 +417,44 @@ if (heavyCommandsSet.has(command)) {
 
 
 // --- Función de Limpieza (¡¡CORREGIDA v7 y REFORZADA!!) ---
-async function cleanSession(telegram_id, notifyUser = false, fullClean = false, logger = null) {
-    // Usa logger pasado, búscalo activamente, o simula con console
-    // Asegurar que telegram_id es string
-    const stringId = String(telegram_id);
-    const currentLogger = logger || findLoggerByTelegramIdFromMap(stringId) || { /* logger simulado */ };
+// main.js - (Inicio de cleanSession - ¡¡CORREGIDO!!)
 
+async function cleanSession(telegram_id, notifyUser = false, fullClean = false, logger = null) {
+    const stringId = String(telegram_id);
+    let currentLogger = logger;
     let whatsappNumber = null;
-    let sessionId = `${stringId}-unknown`; // Default
+    let sessionId = `${stringId}-unknown`;
+
+    // --- ¡¡LÓGICA MEJORADA PARA ENCONTRAR SESSION ID!! ---
     try {
-        const user = await usersDB.getUser(stringId); // Usar stringId
-        whatsappNumber = user?.whatsapp_number;
-        if(whatsappNumber) sessionId = `${stringId}-${whatsappNumber}`;
-    } catch (e) { currentLogger.error(e, `Error obteniendo user ${stringId} en cleanSession`); }
+        const user = await usersDB.getUser(stringId); //
+        if (user?.whatsapp_number) {
+            whatsappNumber = user.whatsapp_number;
+            sessionId = `${stringId}-${whatsappNumber}`;
+        } else {
+            // Plan B: Si la DB falla, busca en el mapa 'sessions'
+            for (const id of sessions.keys()) {
+                if (id.startsWith(stringId + '-')) {
+                    sessionId = id;
+                    whatsappNumber = id.replace(stringId + '-', '');
+                    break;
+                }
+            }
+        }
+    } catch (e) { 
+        console.error(`[CLEAN_ERR ${stringId}] Error obteniendo user:`, e);
+        // (Continúa, el Plan B puede funcionar)
+    }
+    
+    // Asignar logger (AHORA tenemos el sessionId correcto)
+    currentLogger = logger || sessions.get(sessionId)?.logger || findLoggerByTelegramIdFromMap(stringId) || { /* logger simulado */ };
+    // ---
 
     currentLogger.info(`[🧹] Iniciando cleanSession para ${stringId} (${sessionId}) (Notify: ${notifyUser}, Full: ${fullClean})`);
 
-    // 1. Detener procesos activos SOLO SI LA SESIÓN EXISTE en el mapa
-    const sessionData = sessions.get(sessionId);
+    // 1. Detener procesos activos...
+    const sessionData = sessions.get(sessionId); //
+    // ... (el resto de la función se mantiene igual)
     if (sessionData) {
         currentLogger.info(`Deteniendo procesos para sesión activa ${sessionId}...`);
         try {
